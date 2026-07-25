@@ -73,14 +73,13 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		const wasmFile = this.app.vault.adapter.getResourcePath(
 			normalizePath(`${pluginDirectory}/wasm/ort-wasm-simd-threaded.wasm`),
 		);
-		const workerFile = this.app.vault.adapter.getResourcePath(
-			normalizePath(`${pluginDirectory}/worker.js`),
-		);
-		const worker = new SpeechWorkerClient(workerFile);
+		const workerPath = normalizePath(`${pluginDirectory}/worker.js`);
 		this.loading = Promise.all([
 			cache.load("inflect-core.onnx", () => undefined),
 			cache.load("inflect-decoder.onnx", () => undefined),
-		]).then(async ([core, decoder]) => {
+			this.app.vault.adapter.read(workerPath),
+		]).then(async ([core, decoder, workerSource]) => {
+			const worker = new SpeechWorkerClient(workerSource);
 			await worker.initialize(
 				{ "inflect-core.onnx": core, "inflect-decoder.onnx": decoder },
 				new URL(".", wasmFile).href,

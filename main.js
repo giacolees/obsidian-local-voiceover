@@ -135,10 +135,14 @@ function edgeFade(samples, sampleRate = SAMPLE_RATE, milliseconds = 5) {
 
 // src/workerClient.ts
 var SpeechWorkerClient = class {
-  constructor(workerUrl) {
+  constructor(workerSource) {
     this.pending = /* @__PURE__ */ new Map();
     this.nextId = 1;
+    const workerUrl = URL.createObjectURL(
+      new Blob([workerSource], { type: "application/javascript" })
+    );
     this.worker = new Worker(workerUrl);
+    URL.revokeObjectURL(workerUrl);
     this.ready = new Promise((resolve, reject) => {
       this.resolveReady = resolve;
       this.rejectReady = reject;
@@ -270,14 +274,13 @@ var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
     const wasmFile = this.app.vault.adapter.getResourcePath(
       (0, import_obsidian2.normalizePath)(`${pluginDirectory}/wasm/ort-wasm-simd-threaded.wasm`)
     );
-    const workerFile = this.app.vault.adapter.getResourcePath(
-      (0, import_obsidian2.normalizePath)(`${pluginDirectory}/worker.js`)
-    );
-    const worker = new SpeechWorkerClient(workerFile);
+    const workerPath = (0, import_obsidian2.normalizePath)(`${pluginDirectory}/worker.js`);
     this.loading = Promise.all([
       cache.load("inflect-core.onnx", () => void 0),
-      cache.load("inflect-decoder.onnx", () => void 0)
-    ]).then(async ([core, decoder]) => {
+      cache.load("inflect-decoder.onnx", () => void 0),
+      this.app.vault.adapter.read(workerPath)
+    ]).then(async ([core, decoder, workerSource]) => {
+      const worker = new SpeechWorkerClient(workerSource);
       await worker.initialize(
         { "inflect-core.onnx": core, "inflect-decoder.onnx": decoder },
         new URL(".", wasmFile).href

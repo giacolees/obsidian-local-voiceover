@@ -17,8 +17,12 @@ export class SpeechWorkerClient {
 	private readonly pending = new Map<number, PendingRun>();
 	private nextId = 1;
 
-	constructor(workerUrl: string) {
+	constructor(workerSource: string) {
+		const workerUrl = URL.createObjectURL(
+			new Blob([workerSource], { type: "application/javascript" }),
+		);
 		this.worker = new Worker(workerUrl);
+		URL.revokeObjectURL(workerUrl);
 		this.ready = new Promise<void>((resolve, reject) => {
 			this.resolveReady = resolve;
 			this.rejectReady = reject;

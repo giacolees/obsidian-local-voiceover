@@ -2,25 +2,13 @@ import { Editor, Notice, Plugin, normalizePath } from "obsidian";
 import { ModelCache } from "./src/modelCache";
 import { StreamPlayer } from "./src/player";
 import { boundaryPauseSeconds, edgeFade } from "./src/port/runtime.mjs";
-import { createInflectInference } from "./src/port/inference.mjs";
-
-interface Inference {
-	synthesize(
-		text: string,
-		options: { signal: AbortSignal; onChunk: (chunk: InferenceChunk) => Promise<void> },
-	): Promise<unknown>;
-}
-
-interface InferenceChunk {
-	waveform: Float32Array;
-	source: string;
-}
+import { SpeechWorkerClient } from "./src/workerClient";
 
 export default class LocalVoiceoverPlugin extends Plugin {
 	private readonly player = new StreamPlayer();
 	private abortController: AbortController | null = null;
-	private inference: Inference | null = null;
-	private loading: Promise<Inference> | null = null;
+	private worker: SpeechWorkerClient | null = null;
+	private loading: Promise<SpeechWorkerClient> | null = null;
 
 	async onload(): Promise<void> {
 		this.addCommand({
@@ -43,7 +31,6 @@ export default class LocalVoiceoverPlugin extends Plugin {
 	private speakCommand(checking: boolean, editor: Editor): boolean {
 		const text = editor.getSelection().trim();
 		if (!text || this.abortController) return false;
-		// Let Obsidian close the command palette before model loading begins.
 		if (!checking) window.setTimeout(() => void this.speak(text), 0);
 		return true;
 	}
@@ -53,19 +40,19 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		this.abortController = abort;
 		try {
 			await this.player.start();
-			const inference = await this.getInference();
+			const worker = await this.getWorker();
 			if (abort.signal.aborted) return;
 			new Notice("Generating local speech…");
-			await inference.synthesize(text, {
-				signal: abort.signal,
-				onChunk: async (chunk: InferenceChunk) => {
+			await worker.synthesize(
+				text,
+				(chunk) => {
 					if (!abort.signal.aborted) {
 						const faded = edgeFade(chunk.waveform) as Float32Array;
-						const pause = Number(boundaryPauseSeconds(chunk.source));
-						this.player.queue(faded, pause);
+						this.player.queue(faded, Number(boundaryPauseSeconds(chunk.source)));
 					}
 				},
-			});
+				abort.signal,
+			);
 		} catch (error) {
 			if (!abort.signal.aborted) {
 				console.error("Local Voiceover synthesis failed", error);
@@ -77,8 +64,8 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		}
 	}
 
-	private getInference(): Promise<Inference> {
-		if (this.inference) return Promise.resolve(this.inference);
+	private getWorker(): Promise<SpeechWorkerClient> {
+		if (this.worker) return Promise.resolve(this.worker);
 		if (this.loading) return this.loading;
 		new Notice("Preparing local inflect voice model…");
 		const pluginDirectory = normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
@@ -86,22 +73,24 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		const wasmFile = this.app.vault.adapter.getResourcePath(
 			normalizePath(`${pluginDirectory}/wasm/ort-wasm-simd-threaded.wasm`),
 		);
-		const wasmPaths = new URL(".", wasmFile).href;
-		this.loading = createInflectInference({
-			loadModel: async (name: "inflect-core.onnx" | "inflect-decoder.onnx") => {
-				new Notice(`Loading ${name}…`);
-				return cache.load(name, (loaded, total) => {
-					if (total && loaded === total) new Notice(`Downloaded ${name}.`);
-				});
-			},
-			wasmPaths,
-		}) as Promise<Inference>;
-		return this.loading.then((inference) => {
-			this.inference = inference;
-			return inference;
+		const workerFile = this.app.vault.adapter.getResourcePath(
+			normalizePath(`${pluginDirectory}/worker.js`),
+		);
+		const worker = new SpeechWorkerClient(workerFile);
+		this.loading = Promise.all([
+			cache.load("inflect-core.onnx", () => undefined),
+			cache.load("inflect-decoder.onnx", () => undefined),
+		]).then(async ([core, decoder]) => {
+			await worker.initialize(
+				{ "inflect-core.onnx": core, "inflect-decoder.onnx": decoder },
+				new URL(".", wasmFile).href,
+			);
+			this.worker = worker;
+			return worker;
 		}).finally(() => {
 			this.loading = null;
 		});
+		return this.loading;
 	}
 
 	private stop(): void {
@@ -115,5 +104,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		this.abortController?.abort();
 		this.abortController = null;
 		this.player.stop();
+		this.worker?.dispose();
+		this.worker = null;
 	}
 }

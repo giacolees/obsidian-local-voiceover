@@ -1,5 +1,4 @@
 node_modules/
-main.js
 *.map
 model-cache/
 models/

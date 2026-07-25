@@ -1,6 +1,6 @@
 {
 	"id": "local-voiceover",
-	"name": "Local Voiceover - Private Text-to-Speech for Obsidian",
+	"name": "Local Voiceover",
 	"version": "0.1.1",
 	"minAppVersion": "1.7.2",
 	"description": "Speak selected text with local Inflect Micro v2 synthesis.",

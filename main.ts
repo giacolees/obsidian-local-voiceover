@@ -20,7 +20,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 			id: "stop-speaking",
 			name: "Stop speaking",
 			checkCallback: (checking) => {
-				if (!this.abortController) return false;
+				if (!this.isBusy()) return false;
 				if (!checking) this.stop();
 				return true;
 			},
@@ -30,7 +30,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 
 	private speakCommand(checking: boolean, editor: Editor): boolean {
 		const text = editor.getSelection().trim();
-		if (!text || this.abortController) return false;
+		if (!text || this.isBusy()) return false;
 		if (!checking) window.setTimeout(() => void this.speak(text), 0);
 		return true;
 	}
@@ -90,6 +90,10 @@ export default class LocalVoiceoverPlugin extends Plugin {
 			this.loading = null;
 		});
 		return this.loading;
+	}
+
+	private isBusy(): boolean {
+		return this.abortController !== null || this.player.isPlaying;
 	}
 
 	private stop(): void {

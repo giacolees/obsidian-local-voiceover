@@ -3,6 +3,10 @@ export class StreamPlayer {
 	private readonly sources = new Set<AudioBufferSourceNode>();
 	private nextStart = 0;
 
+	get isPlaying(): boolean {
+		return this.sources.size > 0;
+	}
+
 	async start(): Promise<void> {
 		this.stop();
 		this.context = new AudioContext({ sampleRate: 24000 });

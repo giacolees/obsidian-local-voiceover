@@ -85,6 +85,9 @@ var StreamPlayer = class {
     this.sources = /* @__PURE__ */ new Set();
     this.nextStart = 0;
   }
+  get isPlaying() {
+    return this.sources.size > 0;
+  }
   async start() {
     this.stop();
     this.context = new AudioContext({ sampleRate: 24e3 });
@@ -216,7 +219,7 @@ var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
       id: "stop-speaking",
       name: "Stop speaking",
       checkCallback: (checking) => {
-        if (!this.abortController)
+        if (!this.isBusy())
           return false;
         if (!checking)
           this.stop();
@@ -227,7 +230,7 @@ var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
   }
   speakCommand(checking, editor) {
     const text = editor.getSelection().trim();
-    if (!text || this.abortController)
+    if (!text || this.isBusy())
       return false;
     if (!checking)
       window.setTimeout(() => void this.speak(text), 0);
@@ -291,6 +294,9 @@ var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
       this.loading = null;
     });
     return this.loading;
+  }
+  isBusy() {
+    return this.abortController !== null || this.player.isPlaying;
   }
   stop() {
     this.abortController?.abort();

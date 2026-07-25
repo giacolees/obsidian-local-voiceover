@@ -1,0 +1,25 @@
+{
+  "name": "obsidian-local-voiceover",
+  "version": "0.1.0",
+  "description": "Desktop Obsidian plugin for local Inflect Micro v2 voiceover",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "lint": "eslint ."
+  },
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "ephone": "1.0.2",
+    "onnxruntime-web": "1.23.2"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "@typescript-eslint/parser": "^8.59.0",
+    "esbuild": "0.17.3",
+    "eslint": "^9.39.4",
+    "eslint-plugin-obsidianmd": "^0.2.4",
+    "obsidian": "latest",
+    "typescript": "^5.9.3"
+  }
+}

@@ -3,10 +3,7 @@ import { createInflectInference } from "./port/inference.mjs";
 type InitMessage = {
 	type: "init";
 	models: Record<"inflect-core.onnx" | "inflect-decoder.onnx", ArrayBuffer>;
-	runtime: {
-		"ort-wasm-simd-threaded.jsep.mjs": ArrayBuffer;
-		"ort-wasm-simd-threaded.jsep.wasm": ArrayBuffer;
-	};
+	wasmPaths: { mjs: string; wasm: string };
 };
 type SynthesizeMessage = { type: "synthesize"; id: number; text: string };
 type AbortMessage = { type: "abort"; id: number };
@@ -25,13 +22,9 @@ async function handleMessage(message: InitMessage | SynthesizeMessage | AbortMes
 	}
 	if (message.type === "init") {
 		try {
-			const wasmPaths = {
-				mjs: URL.createObjectURL(new Blob([message.runtime["ort-wasm-simd-threaded.jsep.mjs"]])),
-				wasm: URL.createObjectURL(new Blob([message.runtime["ort-wasm-simd-threaded.jsep.wasm"]])),
-			};
 			inference = await createInflectInference({
 				loadModel: async (name: "inflect-core.onnx" | "inflect-decoder.onnx") => message.models[name],
-				wasmPaths: wasmPaths as unknown as string,
+				wasmPaths: message.wasmPaths as unknown as string,
 			});
 			post({ type: "ready" });
 		} catch (error) {

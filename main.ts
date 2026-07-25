@@ -90,13 +90,13 @@ export default class LocalVoiceoverPlugin extends Plugin {
 			cache.loadModel("inflect-decoder.onnx", () => undefined),
 			cache.loadRuntime("ort-wasm-simd-threaded.jsep.mjs", () => undefined),
 			cache.loadRuntime("ort-wasm-simd-threaded.jsep.wasm", () => undefined),
-		]).then(async ([core, decoder, runtimeMjs, runtimeWasm]) => {
+		]).then(async ([core, decoder]) => {
 			const worker = new SpeechWorkerClient(workerSource);
 			await worker.initialize(
 				{ "inflect-core.onnx": core, "inflect-decoder.onnx": decoder },
 				{
-					"ort-wasm-simd-threaded.jsep.mjs": runtimeMjs,
-					"ort-wasm-simd-threaded.jsep.wasm": runtimeWasm,
+					mjs: cache.resourcePath("ort-wasm-simd-threaded.jsep.mjs"),
+					wasm: cache.resourcePath("ort-wasm-simd-threaded.jsep.wasm"),
 				},
 			);
 			this.worker = worker;

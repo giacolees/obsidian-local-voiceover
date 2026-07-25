@@ -37,6 +37,10 @@ export class ModelCache {
 		return this.load(name, ORT_BASE_URL, onProgress);
 	}
 
+	resourcePath(name: CacheAsset): string {
+		return this.adapter.getResourcePath(this.pathFor(name));
+	}
+
 	private async load(name: CacheAsset, baseUrl: string, onProgress: Progress): Promise<ArrayBuffer> {
 		const manifest = await this.loadManifest();
 		const path = this.pathFor(name);

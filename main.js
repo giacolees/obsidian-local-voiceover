@@ -154,7 +154,7 @@ function createSelectionToolbarExtension(actions) {
       constructor(view) {
         this.view = view;
         this.selectedText = "";
-        this.refresh = () => this.render();
+        this.refresh = () => this.scheduleRender();
         this.toolbar = this.view.dom.ownerDocument.body.createDiv({
           cls: "local-voiceover-selection-toolbar"
         });
@@ -174,25 +174,33 @@ function createSelectionToolbarExtension(actions) {
         this.playButton.addEventListener("click", () => actions.speak(this.selectedText));
         this.stopButton.addEventListener("click", () => actions.stop());
         window.addEventListener("local-voiceover-state", this.refresh);
-        this.render();
+        this.scheduleRender();
       }
       update(update) {
         if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged)
-          this.render();
+          this.scheduleRender();
       }
       destroy() {
         window.removeEventListener("local-voiceover-state", this.refresh);
         this.toolbar.remove();
       }
-      render() {
+      scheduleRender() {
         const selection = this.view.state.selection.main;
         this.selectedText = this.view.state.sliceDoc(selection.from, selection.to).trim();
-        const coords = this.selectedText && this.view.hasFocus ? this.view.coordsAtPos(selection.from) : null;
+        if (!this.selectedText || !this.view.hasFocus) {
+          this.applyPosition(null, actions.getState());
+          return;
+        }
+        this.view.requestMeasure({
+          read: () => this.view.coordsAtPos(selection.from),
+          write: (coords) => this.applyPosition(coords, actions.getState())
+        });
+      }
+      applyPosition(coords, state) {
         if (!coords) {
           this.toolbar.hide();
           return;
         }
-        const state = actions.getState();
         this.playButton.disabled = state !== "idle";
         this.stopButton.disabled = state === "idle";
         this.status.setText(

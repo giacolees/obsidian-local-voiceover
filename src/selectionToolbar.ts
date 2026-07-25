@@ -18,7 +18,7 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 			private readonly stopButton: HTMLButtonElement;
 			private readonly status: HTMLElement;
 			private selectedText = "";
-			private readonly refresh = () => this.render();
+			private readonly refresh = () => this.scheduleRender();
 
 			constructor(private readonly view: EditorView) {
 				this.toolbar = this.view.dom.ownerDocument.body.createDiv({
@@ -40,12 +40,12 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 				this.playButton.addEventListener("click", () => actions.speak(this.selectedText));
 				this.stopButton.addEventListener("click", () => actions.stop());
 				window.addEventListener("local-voiceover-state", this.refresh);
-				this.render();
+				this.scheduleRender();
 			}
 
 			update(update: ViewUpdate): void {
 				if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged)
-					this.render();
+					this.scheduleRender();
 			}
 
 			destroy(): void {
@@ -53,15 +53,24 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 				this.toolbar.remove();
 			}
 
-			private render(): void {
+			private scheduleRender(): void {
 				const selection = this.view.state.selection.main;
 				this.selectedText = this.view.state.sliceDoc(selection.from, selection.to).trim();
-				const coords = this.selectedText && this.view.hasFocus ? this.view.coordsAtPos(selection.from) : null;
+				if (!this.selectedText || !this.view.hasFocus) {
+					this.applyPosition(null, actions.getState());
+					return;
+				}
+				this.view.requestMeasure({
+					read: () => this.view.coordsAtPos(selection.from),
+					write: (coords) => this.applyPosition(coords, actions.getState()),
+				});
+			}
+
+			private applyPosition(coords: ReturnType<EditorView["coordsAtPos"]>, state: VoiceoverState): void {
 				if (!coords) {
 					this.toolbar.hide();
 					return;
 				}
-				const state = actions.getState();
 				this.playButton.disabled = state !== "idle";
 				this.stopButton.disabled = state === "idle";
 				this.status.setText(

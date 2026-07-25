@@ -19,11 +19,13 @@ jobs:
 
       - run: npm ci
 
-      - name: Build
-        run: npm run build
+      - name: Quality checks
+        run: npm run check
 
       - name: Verify release assets
         run: test -f main.js && test -f worker.js && test -f styles.css && test -d wasm
 
-      - name: Lint
-        run: npm run lint
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

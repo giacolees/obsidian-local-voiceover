@@ -1,0 +1,7 @@
+{
+  "entry": ["main.ts", "src/worker.ts"],
+  "project": ["**/*.{ts,mjs}"],
+  "ignore": ["worker.js", "src/port/**/*.mjs"],
+  "ignoreDependencies": ["ephone", "onnxruntime-web", "jscpd", "madge", "markdownlint-cli2"],
+  "ignoreExportsUsedInFile": true
+}

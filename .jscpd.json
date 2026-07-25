@@ -1,0 +1,6 @@
+{
+  "threshold": 0,
+  "minLines": 20,
+  "minTokens": 100,
+  "ignore": ["node_modules", "wasm", "main.js", "worker.js"]
+}

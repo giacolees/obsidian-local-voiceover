@@ -1,10 +1,10 @@
 {
-  "id": "local-voiceover",
-  "name": "Local Voiceover - Private Text-to-Speech for Obsidian",
-  "version": "0.1.0",
-  "minAppVersion": "1.7.2",
-  "description": "Speak selected text with local Inflect Micro v2 synthesis.",
-  "author": "giacomolisita",
-  "authorUrl": "https://github.com/giacolees",
-  "isDesktopOnly": true
+	"id": "local-voiceover",
+	"name": "Local Voiceover - Private Text-to-Speech for Obsidian",
+	"version": "0.1.1",
+	"minAppVersion": "1.7.2",
+	"description": "Speak selected text with local Inflect Micro v2 synthesis.",
+	"author": "giacomolisita",
+	"authorUrl": "https://github.com/giacolees",
+	"isDesktopOnly": true
 }

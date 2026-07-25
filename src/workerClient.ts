@@ -33,9 +33,14 @@ export class SpeechWorkerClient {
 
 	async initialize(
 		models: Record<"inflect-core.onnx" | "inflect-decoder.onnx", ArrayBuffer>,
-		wasmPaths: string,
+		runtime: Record<"ort-wasm-simd-threaded.jsep.mjs" | "ort-wasm-simd-threaded.jsep.wasm", ArrayBuffer>,
 	): Promise<void> {
-		this.worker.postMessage({ type: "init", models, wasmPaths }, [models["inflect-core.onnx"], models["inflect-decoder.onnx"]]);
+		this.worker.postMessage({ type: "init", models, runtime }, [
+			models["inflect-core.onnx"],
+			models["inflect-decoder.onnx"],
+			runtime["ort-wasm-simd-threaded.jsep.mjs"],
+			runtime["ort-wasm-simd-threaded.jsep.wasm"],
+		]);
 		return this.ready;
 	}
 

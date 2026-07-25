@@ -4,7 +4,7 @@
 
 Local Voiceover turns the selected text in an Obsidian note into speech directly on your desktop. It runs [Inflect Micro v2](https://huggingface.co/owensong/Inflect-Micro-v2) locally through ONNX Runtime Web and WebAssembly: no API key, account, Python installation, or uploaded note content.
 
-> **Built for focused reading.** Inflect Micro v2 is a compact 9.36 M-parameter English text-to-waveform model. Local Voiceover keeps its phonemizer and ONNX graphs in a worker, so long passages can synthesize without freezing the editor. The first run downloads roughly 38 MB of model graphs; later playback works from the local cache, including offline.
+> **Built for focused reading.** Inflect Micro v2 is a compact 9.36 M-parameter English text-to-waveform model. Local Voiceover keeps its phonemizer and ONNX graphs in a worker, so long passages can synthesize without freezing the editor. The first run downloads roughly 38 MB of model graphs plus its runtime assets; later playback works from the local cache, including offline.
 
 ---
 
@@ -29,7 +29,7 @@ Local Voiceover adapts the browser port of Inflect Micro v2 into an Obsidian plu
 3. Two local ONNX graphs generate a 24 kHz mono waveform in a worker.
 4. Obsidian queues each completed chunk through Web Audio, allowing playback to begin before a long selection has fully synthesized.
 
-The initial model download comes from [`giacolees/Inflect-Micro-v2-ONNX`](https://huggingface.co/giacolees/Inflect-Micro-v2-ONNX). Graph bytes are cached locally and verified against their stored SHA-256 cache manifest before reuse.
+The initial model download comes from [`giacolees/Inflect-Micro-v2-ONNX`](https://huggingface.co/giacolees/Inflect-Micro-v2-ONNX). The pinned ONNX Runtime Web assets are downloaded once from jsDelivr. Graph and runtime bytes are cached locally and verified against their stored SHA-256 cache manifest before reuse.
 
 ### Model scope
 
@@ -57,9 +57,9 @@ Once approved in Obsidian's community catalog, install from **Settings → Commu
 
 ### From a GitHub release
 
-1. Download `main.js`, `worker.js`, `manifest.json`, `styles.css`, and the `wasm/` files from the latest [release](https://github.com/giacolees/obsidian-local-voiceover/releases).
+1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [release](https://github.com/giacolees/obsidian-local-voiceover/releases).
 2. Create `<vault>/.obsidian/plugins/local-voiceover/`.
-3. Put the downloaded files in that directory, preserving the `wasm/` folder.
+3. Put the three downloaded files in that directory.
 4. Enable **Local Voiceover** in **Settings → Community plugins**.
 
 ### From source
@@ -88,7 +88,7 @@ npm run check    # build, lint, markdown, unused-code, cycle, and duplicate chec
 
 1. Bump the version with `npm version patch` (or `minor` / `major`).
 2. Push the commit and tag to GitHub.
-3. The release workflow runs all quality checks and attaches `main.js`, `worker.js`, `manifest.json`, `styles.css`, and the ORT WebAssembly assets.
+3. The release workflow runs all quality checks and attaches the Community Plugin-compatible `main.js`, `manifest.json`, and `styles.css` files.
 4. Submit the repository to the Obsidian community plugin list, or update the existing listing.
 
 ---

@@ -25,8 +25,8 @@ jobs:
       - name: Quality checks
         run: npm run check
 
-      - name: Verify release assets
-        run: test -f main.js && test -f worker.js && test -f styles.css && test -d wasm
+      - name: Verify Community Plugin release assets
+        run: test -f main.js && test -f manifest.json && test -f styles.css
 
       - name: Verify manifest version matches tag
         run: |
@@ -80,7 +80,5 @@ jobs:
           body: ${{ steps.release_notes.outputs.changelog }}
           files: |
             main.js
-            worker.js
             manifest.json
             styles.css
-            wasm/*

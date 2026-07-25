@@ -3,6 +3,7 @@ import { ModelCache } from "./src/modelCache";
 import { StreamPlayer } from "./src/player";
 import { boundaryPauseSeconds, edgeFade } from "./src/port/runtime.mjs";
 import { createSelectionToolbarExtension, type VoiceoverState } from "./src/selectionToolbar";
+import workerSource from "./src/generatedWorker";
 import { SpeechWorkerClient } from "./src/workerClient";
 
 export default class LocalVoiceoverPlugin extends Plugin {
@@ -84,19 +85,19 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		new Notice("Preparing local inflect voice model…");
 		const pluginDirectory = normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
 		const cache = new ModelCache(this.app.vault.adapter, pluginDirectory);
-		const wasmFile = this.app.vault.adapter.getResourcePath(
-			normalizePath(`${pluginDirectory}/wasm/ort-wasm-simd-threaded.wasm`),
-		);
-		const workerPath = normalizePath(`${pluginDirectory}/worker.js`);
 		this.loading = Promise.all([
-			cache.load("inflect-core.onnx", () => undefined),
-			cache.load("inflect-decoder.onnx", () => undefined),
-			this.app.vault.adapter.read(workerPath),
-		]).then(async ([core, decoder, workerSource]) => {
+			cache.loadModel("inflect-core.onnx", () => undefined),
+			cache.loadModel("inflect-decoder.onnx", () => undefined),
+			cache.loadRuntime("ort-wasm-simd-threaded.jsep.mjs", () => undefined),
+			cache.loadRuntime("ort-wasm-simd-threaded.jsep.wasm", () => undefined),
+		]).then(async ([core, decoder, runtimeMjs, runtimeWasm]) => {
 			const worker = new SpeechWorkerClient(workerSource);
 			await worker.initialize(
 				{ "inflect-core.onnx": core, "inflect-decoder.onnx": decoder },
-				new URL(".", wasmFile).href,
+				{
+					"ort-wasm-simd-threaded.jsep.mjs": runtimeMjs,
+					"ort-wasm-simd-threaded.jsep.wasm": runtimeWasm,
+				},
 			);
 			this.worker = worker;
 			return worker;

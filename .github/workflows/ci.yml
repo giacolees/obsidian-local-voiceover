@@ -22,8 +22,8 @@ jobs:
       - name: Quality checks
         run: npm run check
 
-      - name: Verify release assets
-        run: test -f main.js && test -f worker.js && test -f styles.css && test -d wasm
+      - name: Verify Community Plugin release assets
+        run: test -f main.js && test -f manifest.json && test -f styles.css
 
       - name: Secret scan
         uses: gitleaks/gitleaks-action@v2

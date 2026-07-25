@@ -1,23 +1,9 @@
 import fs from "node:fs";
-import path from "node:path";
 import process from "node:process";
 import { builtinModules as builtins } from "node:module";
 import esbuild from "esbuild";
 
 const production = process.argv[2] === "production";
-const ortAssets = {
-	name: "copy-ort-assets",
-	setup(build) {
-		build.onEnd(() => {
-			const destination = "wasm";
-			fs.mkdirSync(destination, { recursive: true });
-			for (const name of fs.readdirSync("node_modules/onnxruntime-web/dist")) {
-				if (/\.(wasm|mjs)$/.test(name))
-					fs.copyFileSync(path.join("node_modules/onnxruntime-web/dist", name), path.join(destination, name));
-			}
-		});
-	},
-};
 const external = [
 	"node:*",
 	"obsidian",
@@ -44,22 +30,22 @@ const shared = {
 };
 
 async function build() {
+	const worker = await esbuild.build({
+		...shared,
+		entryPoints: ["src/worker.ts"],
+		format: "iife",
+		external: ["node:*"],
+		write: false,
+	});
+	const source = worker.outputFiles[0].text;
+	fs.writeFileSync("src/generatedWorker.ts", `const workerSource = ${JSON.stringify(source)};\nexport default workerSource;\n`);
 	await esbuild.build({
 		...shared,
 		entryPoints: ["main.ts"],
 		outfile: "main.js",
 		format: "cjs",
 		external,
-		plugins: [ortAssets],
-	});
-	await esbuild.build({
-		...shared,
-		entryPoints: ["src/worker.ts"],
-		outfile: "worker.js",
-		format: "iife",
-		external: ["node:*"],
 	});
 }
 
-if (production) await build();
-else await build();
+await build();

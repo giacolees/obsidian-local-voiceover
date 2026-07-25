@@ -6,3 +6,6 @@ models/
 *.onnx.data
 *.wav
 wasm/
+worker.js
+src/generatedWorker.ts
+runtime-cache/

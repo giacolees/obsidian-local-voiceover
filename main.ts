@@ -82,7 +82,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 	private getWorker(): Promise<SpeechWorkerClient> {
 		if (this.worker) return Promise.resolve(this.worker);
 		if (this.loading) return this.loading;
-		new Notice("Preparing local inflect voice model…");
+		new Notice("Preparing local voice model…");
 		const pluginDirectory = normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
 		const cache = new ModelCache(this.app.vault.adapter, pluginDirectory);
 		this.loading = Promise.all([

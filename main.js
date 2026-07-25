@@ -381,7 +381,7 @@ var LocalVoiceoverPlugin = class extends import_obsidian3.Plugin {
       return Promise.resolve(this.worker);
     if (this.loading)
       return this.loading;
-    new import_obsidian3.Notice("Preparing local inflect voice model\u2026");
+    new import_obsidian3.Notice("Preparing local voice model\u2026");
     const pluginDirectory = (0, import_obsidian3.normalizePath)(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
     const cache = new ModelCache(this.app.vault.adapter, pluginDirectory);
     this.loading = Promise.all([

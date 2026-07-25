@@ -1,0 +1,26 @@
+.local-voiceover-selection-toolbar {
+	align-items: center;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	box-shadow: var(--shadow-s);
+	display: flex;
+	gap: 2px;
+	padding: 3px;
+	position: fixed;
+	transform: translateY(-100%);
+	z-index: var(--layer-popover);
+}
+
+.local-voiceover-selection-toolbar__button {
+	height: 28px;
+	width: 28px;
+}
+
+.local-voiceover-selection-toolbar__status {
+	border-left: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	margin-left: 2px;
+	padding: 0 6px;
+}

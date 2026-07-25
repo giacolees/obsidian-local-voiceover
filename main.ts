@@ -2,6 +2,7 @@ import { Editor, Notice, Plugin, normalizePath } from "obsidian";
 import { ModelCache } from "./src/modelCache";
 import { StreamPlayer } from "./src/player";
 import { boundaryPauseSeconds, edgeFade } from "./src/port/runtime.mjs";
+import { createSelectionToolbarExtension, type VoiceoverState } from "./src/selectionToolbar";
 import { SpeechWorkerClient } from "./src/workerClient";
 
 export default class LocalVoiceoverPlugin extends Plugin {
@@ -9,8 +10,17 @@ export default class LocalVoiceoverPlugin extends Plugin {
 	private abortController: AbortController | null = null;
 	private worker: SpeechWorkerClient | null = null;
 	private loading: Promise<SpeechWorkerClient> | null = null;
+	private state: VoiceoverState = "idle";
 
 	async onload(): Promise<void> {
+		this.player.setOnStateChange(() => this.syncPlaybackState());
+		this.registerEditorExtension(
+			createSelectionToolbarExtension({
+				getState: () => this.state,
+				speak: (text) => void this.speak(text),
+				stop: () => this.stop(),
+			}),
+		);
 		this.addCommand({
 			id: "speak-selected-text",
 			name: "Speak selected text",
@@ -36,19 +46,22 @@ export default class LocalVoiceoverPlugin extends Plugin {
 	}
 
 	private async speak(text: string): Promise<void> {
+		if (!text || this.isBusy()) return;
 		const abort = new AbortController();
 		this.abortController = abort;
+		this.setState("loading");
 		try {
 			await this.player.start();
 			const worker = await this.getWorker();
 			if (abort.signal.aborted) return;
+			this.setState("generating");
 			new Notice("Generating local speech…");
 			await worker.synthesize(
 				text,
 				(chunk) => {
 					if (!abort.signal.aborted) {
-						const faded = edgeFade(chunk.waveform) as Float32Array;
-						this.player.queue(faded, Number(boundaryPauseSeconds(chunk.source)));
+						this.setState("speaking");
+						this.player.queue(edgeFade(chunk.waveform) as Float32Array, Number(boundaryPauseSeconds(chunk.source)));
 					}
 				},
 				abort.signal,
@@ -61,6 +74,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 			}
 		} finally {
 			if (this.abortController === abort) this.abortController = null;
+			this.syncPlaybackState();
 		}
 	}
 
@@ -100,7 +114,18 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		this.abortController?.abort();
 		this.abortController = null;
 		this.player.stop();
+		this.setState("idle");
 		new Notice("Speech stopped.");
+	}
+
+	private syncPlaybackState(): void {
+		if (!this.abortController && !this.player.isPlaying) this.setState("idle");
+	}
+
+	private setState(state: VoiceoverState): void {
+		if (this.state === state) return;
+		this.state = state;
+		window.dispatchEvent(new Event("local-voiceover-state"));
 	}
 
 	private disposeRuntime(): void {

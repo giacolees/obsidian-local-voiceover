@@ -23,7 +23,7 @@ __export(main_exports, {
   default: () => LocalVoiceoverPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/modelCache.ts
 var import_obsidian = require("obsidian");
@@ -84,6 +84,10 @@ var StreamPlayer = class {
     this.context = null;
     this.sources = /* @__PURE__ */ new Set();
     this.nextStart = 0;
+    this.onStateChange = () => void 0;
+  }
+  setOnStateChange(onStateChange) {
+    this.onStateChange = onStateChange;
   }
   get isPlaying() {
     return this.sources.size > 0;
@@ -102,11 +106,15 @@ var StreamPlayer = class {
     const source = this.context.createBufferSource();
     source.buffer = buffer;
     source.connect(this.context.destination);
-    source.addEventListener("ended", () => this.sources.delete(source));
+    source.addEventListener("ended", () => {
+      this.sources.delete(source);
+      this.onStateChange();
+    });
     const startAt = Math.max(this.nextStart, this.context.currentTime + 0.05);
     source.start(startAt);
     this.nextStart = startAt + buffer.duration + pauseSeconds;
     this.sources.add(source);
+    this.onStateChange();
   }
   stop() {
     for (const source of this.sources)
@@ -114,6 +122,7 @@ var StreamPlayer = class {
     this.sources.clear();
     void this.context?.close();
     this.context = null;
+    this.onStateChange();
   }
 };
 
@@ -134,6 +143,67 @@ function edgeFade(samples, sampleRate = SAMPLE_RATE, milliseconds = 5) {
     output[output.length - 1 - index] *= gain;
   }
   return output;
+}
+
+// src/selectionToolbar.ts
+var import_view = require("@codemirror/view");
+var import_obsidian2 = require("obsidian");
+function createSelectionToolbarExtension(actions) {
+  return import_view.ViewPlugin.fromClass(
+    class {
+      constructor(view) {
+        this.view = view;
+        this.selectedText = "";
+        this.refresh = () => this.render();
+        this.toolbar = this.view.dom.ownerDocument.body.createDiv({
+          cls: "local-voiceover-selection-toolbar"
+        });
+        this.playButton = this.toolbar.createEl("button", {
+          cls: "clickable-icon local-voiceover-selection-toolbar__button",
+          attr: { "aria-label": "Speak selected text", "data-tooltip-position": "top" }
+        });
+        (0, import_obsidian2.setIcon)(this.playButton, "play");
+        this.stopButton = this.toolbar.createEl("button", {
+          cls: "clickable-icon local-voiceover-selection-toolbar__button",
+          attr: { "aria-label": "Stop speaking", "data-tooltip-position": "top" }
+        });
+        (0, import_obsidian2.setIcon)(this.stopButton, "square");
+        this.status = this.toolbar.createSpan({ cls: "local-voiceover-selection-toolbar__status" });
+        for (const button of [this.playButton, this.stopButton])
+          button.addEventListener("mousedown", (event) => event.preventDefault());
+        this.playButton.addEventListener("click", () => actions.speak(this.selectedText));
+        this.stopButton.addEventListener("click", () => actions.stop());
+        window.addEventListener("local-voiceover-state", this.refresh);
+        this.render();
+      }
+      update(update) {
+        if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged)
+          this.render();
+      }
+      destroy() {
+        window.removeEventListener("local-voiceover-state", this.refresh);
+        this.toolbar.remove();
+      }
+      render() {
+        const selection = this.view.state.selection.main;
+        this.selectedText = this.view.state.sliceDoc(selection.from, selection.to).trim();
+        const coords = this.selectedText && this.view.hasFocus ? this.view.coordsAtPos(selection.from) : null;
+        if (!coords) {
+          this.toolbar.hide();
+          return;
+        }
+        const state = actions.getState();
+        this.playButton.disabled = state !== "idle";
+        this.stopButton.disabled = state === "idle";
+        this.status.setText(
+          { idle: "Ready", loading: "Loading", generating: "Generating", speaking: "Speaking" }[state]
+        );
+        this.toolbar.style.left = `${coords.left}px`;
+        this.toolbar.style.top = `${Math.max(8, coords.top - 8)}px`;
+        this.toolbar.show();
+      }
+    }
+  );
 }
 
 // src/workerClient.ts
@@ -201,15 +271,24 @@ var SpeechWorkerClient = class {
 };
 
 // main.ts
-var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
+var LocalVoiceoverPlugin = class extends import_obsidian3.Plugin {
   constructor() {
     super(...arguments);
     this.player = new StreamPlayer();
     this.abortController = null;
     this.worker = null;
     this.loading = null;
+    this.state = "idle";
   }
   async onload() {
+    this.player.setOnStateChange(() => this.syncPlaybackState());
+    this.registerEditorExtension(
+      createSelectionToolbarExtension({
+        getState: () => this.state,
+        speak: (text) => void this.speak(text),
+        stop: () => this.stop()
+      })
+    );
     this.addCommand({
       id: "speak-selected-text",
       name: "Speak selected text",
@@ -237,20 +316,24 @@ var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
     return true;
   }
   async speak(text) {
+    if (!text || this.isBusy())
+      return;
     const abort = new AbortController();
     this.abortController = abort;
+    this.setState("loading");
     try {
       await this.player.start();
       const worker = await this.getWorker();
       if (abort.signal.aborted)
         return;
-      new import_obsidian2.Notice("Generating local speech\u2026");
+      this.setState("generating");
+      new import_obsidian3.Notice("Generating local speech\u2026");
       await worker.synthesize(
         text,
         (chunk) => {
           if (!abort.signal.aborted) {
-            const faded = edgeFade(chunk.waveform);
-            this.player.queue(faded, Number(boundaryPauseSeconds(chunk.source)));
+            this.setState("speaking");
+            this.player.queue(edgeFade(chunk.waveform), Number(boundaryPauseSeconds(chunk.source)));
           }
         },
         abort.signal
@@ -259,11 +342,12 @@ var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
       if (!abort.signal.aborted) {
         console.error("Local Voiceover synthesis failed", error);
         const message = error instanceof Error ? error.message : "Unknown synthesis error.";
-        new import_obsidian2.Notice(`Local Voiceover: ${message}`);
+        new import_obsidian3.Notice(`Local Voiceover: ${message}`);
       }
     } finally {
       if (this.abortController === abort)
         this.abortController = null;
+      this.syncPlaybackState();
     }
   }
   getWorker() {
@@ -271,13 +355,13 @@ var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
       return Promise.resolve(this.worker);
     if (this.loading)
       return this.loading;
-    new import_obsidian2.Notice("Preparing local inflect voice model\u2026");
-    const pluginDirectory = (0, import_obsidian2.normalizePath)(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
+    new import_obsidian3.Notice("Preparing local inflect voice model\u2026");
+    const pluginDirectory = (0, import_obsidian3.normalizePath)(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
     const cache = new ModelCache(this.app.vault.adapter, pluginDirectory);
     const wasmFile = this.app.vault.adapter.getResourcePath(
-      (0, import_obsidian2.normalizePath)(`${pluginDirectory}/wasm/ort-wasm-simd-threaded.wasm`)
+      (0, import_obsidian3.normalizePath)(`${pluginDirectory}/wasm/ort-wasm-simd-threaded.wasm`)
     );
-    const workerPath = (0, import_obsidian2.normalizePath)(`${pluginDirectory}/worker.js`);
+    const workerPath = (0, import_obsidian3.normalizePath)(`${pluginDirectory}/worker.js`);
     this.loading = Promise.all([
       cache.load("inflect-core.onnx", () => void 0),
       cache.load("inflect-decoder.onnx", () => void 0),
@@ -302,7 +386,18 @@ var LocalVoiceoverPlugin = class extends import_obsidian2.Plugin {
     this.abortController?.abort();
     this.abortController = null;
     this.player.stop();
-    new import_obsidian2.Notice("Speech stopped.");
+    this.setState("idle");
+    new import_obsidian3.Notice("Speech stopped.");
+  }
+  syncPlaybackState() {
+    if (!this.abortController && !this.player.isPlaying)
+      this.setState("idle");
+  }
+  setState(state) {
+    if (this.state === state)
+      return;
+    this.state = state;
+    window.dispatchEvent(new Event("local-voiceover-state"));
   }
   disposeRuntime() {
     this.abortController?.abort();

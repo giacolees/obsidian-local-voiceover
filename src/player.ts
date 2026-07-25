@@ -2,6 +2,11 @@ export class StreamPlayer {
 	private context: AudioContext | null = null;
 	private readonly sources = new Set<AudioBufferSourceNode>();
 	private nextStart = 0;
+	private onStateChange: () => void = () => undefined;
+
+	setOnStateChange(onStateChange: () => void): void {
+		this.onStateChange = onStateChange;
+	}
 
 	get isPlaying(): boolean {
 		return this.sources.size > 0;
@@ -21,11 +26,15 @@ export class StreamPlayer {
 		const source = this.context.createBufferSource();
 		source.buffer = buffer;
 		source.connect(this.context.destination);
-		source.addEventListener("ended", () => this.sources.delete(source));
+		source.addEventListener("ended", () => {
+			this.sources.delete(source);
+			this.onStateChange();
+		});
 		const startAt = Math.max(this.nextStart, this.context.currentTime + 0.05);
 		source.start(startAt);
 		this.nextStart = startAt + buffer.duration + pauseSeconds;
 		this.sources.add(source);
+		this.onStateChange();
 	}
 
 	stop(): void {
@@ -33,5 +42,6 @@ export class StreamPlayer {
 		this.sources.clear();
 		void this.context?.close();
 		this.context = null;
+		this.onStateChange();
 	}
 }

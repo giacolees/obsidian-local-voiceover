@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "license": "GPL-3.0-or-later",
   "dependencies": {

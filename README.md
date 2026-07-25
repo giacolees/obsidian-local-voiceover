@@ -1,18 +1,100 @@
-# Local Voiceover for Obsidian
+# Local Voiceover: Private Text-to-Speech for Obsidian
 
-GPL-3.0-or-later desktop Obsidian plugin that speaks the current editor selection with local Inflect Micro v2 ONNX/WebAssembly inference.
+**Select a passage. Hear it in seconds. Never send your notes to a voice provider.**
 
-- First use downloads the two ONNX graphs from [`giacolees/Inflect-Micro-v2-ONNX`](https://huggingface.co/giacolees/Inflect-Micro-v2-ONNX).
-- Graph bytes are stored in the plugin data directory and reused offline.
-- Text normalization, eSpeak-compatible WASM phonemization, ONNX inference, and playback run in the renderer. There is no provider, Python process, or uploaded note content.
+Local Voiceover turns the selected text in an Obsidian note into speech directly on your desktop. It runs [Inflect Micro v2](https://huggingface.co/owensong/Inflect-Micro-v2) locally through ONNX Runtime Web and WebAssembly: no API key, account, Python installation, or uploaded note content.
 
-## Commands
+> **Built for focused reading.** Inflect Micro v2 is a compact 9.36 M-parameter English text-to-waveform model. Local Voiceover keeps its phonemizer and ONNX graphs in a worker, so long passages can synthesize without freezing the editor. The first run downloads roughly 38 MB of model graphs; later playback works from the local cache, including offline.
 
-- **Speak selected text**
-- **Stop speaking**
+---
+
+## Why Local Voiceover?
+
+Hosted TTS services require an account, an API key, and a copy of your writing on somebody else's server. Local Voiceover stays inside Obsidian:
+
+- **Private by default** — selected text, phonemization, inference, and audio playback stay on your machine.
+- **Offline after the first download** — the model graphs are cached in the plugin data directory.
+- **No setup burden** — no provider configuration, Python runtime, or local server.
+- **Responsive notes** — inference runs in a dedicated worker while you keep editing.
+- **Made for reading** — speak one selected sentence or a longer passage, then stop whenever you need.
+
+---
+
+## How it works
+
+Local Voiceover adapts the browser port of Inflect Micro v2 into an Obsidian plugin:
+
+1. It normalizes and splits selected English text into model-safe chunks.
+2. An eSpeak-compatible WebAssembly frontend converts chunks to phonemes.
+3. Two local ONNX graphs generate a 24 kHz mono waveform in a worker.
+4. Obsidian queues each completed chunk through Web Audio, allowing playback to begin before a long selection has fully synthesized.
+
+The initial model download comes from [`giacolees/Inflect-Micro-v2-ONNX`](https://huggingface.co/giacolees/Inflect-Micro-v2-ONNX). Graph bytes are cached locally and verified against their stored SHA-256 cache manifest before reuse.
+
+### Model scope
+
+Inflect Micro v2 provides one fixed English male voice. It is not voice cloning, multilingual TTS, or a streaming acoustic model. Pronunciation of unfamiliar names, abbreviations, and unusual phrasing can vary.
+
+---
+
+## Usage
+
+1. Open a note in **Live Preview** or **Source mode**.
+2. Select the text you want to hear.
+3. Use the floating **Play** button above the selection, or run **Local Voiceover: Speak selected text** from the Command Palette.
+4. On first use, wait for the local model download and initialization.
+5. Use the floating **Stop** button or run **Local Voiceover: Stop speaking** to stop synthesis or playback.
+
+The selection controls display **Ready**, **Loading**, **Generating**, or **Speaking** so you can see the current state.
+
+---
+
+## Installation
+
+### Community plugin
+
+Once approved in Obsidian's community catalog, install from **Settings → Community plugins → Browse** and search for `Local Voiceover`.
+
+### From a GitHub release
+
+1. Download `main.js`, `worker.js`, `manifest.json`, `styles.css`, and the `wasm/` files from the latest [release](https://github.com/giacolees/obsidian-local-voiceover/releases).
+2. Create `<vault>/.obsidian/plugins/local-voiceover/`.
+3. Put the downloaded files in that directory, preserving the `wasm/` folder.
+4. Enable **Local Voiceover** in **Settings → Community plugins**.
+
+### From source
+
+```bash
+git clone https://github.com/giacolees/obsidian-local-voiceover.git
+cd obsidian-local-voiceover
+npm install
+npm run build
+```
+
+Copy or symlink the repository into `<vault>/.obsidian/plugins/local-voiceover/`, then enable it under **Settings → Community plugins**.
+
+---
+
+## Development
+
+```bash
+npm run dev      # build the plugin bundles
+npm run build    # type-check and build production assets
+npm run lint     # ESLint checks
+npm run check    # build, lint, markdown, unused-code, cycle, and duplicate checks
+```
+
+## Releasing to Obsidian Community Plugins
+
+1. Bump the version with `npm version patch` (or `minor` / `major`).
+2. Push the commit and tag to GitHub.
+3. The release workflow runs all quality checks and attaches `main.js`, `worker.js`, `manifest.json`, `styles.css`, and the ORT WebAssembly assets.
+4. Submit the repository to the Obsidian community plugin list, or update the existing listing.
+
+---
 
 ## License and provenance
 
-This plugin bundles `ephone@1.0.2`, which is GPL-3.0-or-later. The plugin is therefore GPL-3.0-or-later. See `THIRD_PARTY_NOTICES.md`, `third_party/EPHONE_COPYING.txt`, and `UPSTREAM_INFLECT_LICENSE`.
+Local Voiceover is licensed under **GPL-3.0-or-later** because it bundles [`ephone`](https://github.com/sjmik/ephone-js), an eSpeak-NG WebAssembly frontend under GPL-3.0-or-later. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [third_party/EPHONE_COPYING.txt](third_party/EPHONE_COPYING.txt), and [UPSTREAM_INFLECT_LICENSE](UPSTREAM_INFLECT_LICENSE).
 
-The model weights are not bundled. They are retrieved from the linked Hugging Face ONNX repository on first use.
+Inflect Micro v2 model weights and original runtime are released under Apache-2.0. The model weights are not bundled with this repository.

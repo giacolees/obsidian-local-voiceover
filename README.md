@@ -20,23 +20,6 @@ Hosted TTS services require an account, an API key, and a copy of your writing o
 
 ---
 
-## How it works
-
-Local Voiceover adapts the browser port of Inflect Micro v2 into an Obsidian plugin:
-
-1. It normalizes and splits selected English text into model-safe chunks.
-2. An eSpeak-compatible WebAssembly frontend converts chunks to phonemes.
-3. Two local ONNX graphs generate a 24 kHz mono waveform in a worker.
-4. Obsidian queues each completed chunk through Web Audio, allowing playback to begin before a long selection has fully synthesized.
-
-The initial model download comes from the official [`owensong/Inflect-Micro-v2-ONNX`](https://huggingface.co/owensong/Inflect-Micro-v2-ONNX) export. The pinned ONNX Runtime Web assets are downloaded once from jsDelivr. Graph and runtime bytes are cached locally and verified against their stored SHA-256 cache manifest before reuse.
-
-### Model scope
-
-Inflect Micro v2 provides one fixed English male voice. It is not voice cloning, multilingual TTS, or a streaming acoustic model. Pronunciation of unfamiliar names, abbreviations, and unusual phrasing can vary.
-
----
-
 ## Usage
 
 1. Open a note in **Live Preview** or **Source mode**.
@@ -54,6 +37,23 @@ In **Settings → Local Voiceover**, configure:
 - **Speed** (`0.5`–`2.0`, default `1.0`): lower is slower.
 - **Variation** (`0`–`1`, default `0.667`): lower is steadier.
 - **Seed** (safe integer, default `0`): the same seed repeats the stochastic sample on the same runtime; long passages use `seed + chunkIndex`.
+
+---
+
+## How it works
+
+Local Voiceover adapts the browser port of Inflect Micro v2 into an Obsidian plugin:
+
+1. It normalizes and splits selected English text into model-safe chunks.
+2. An eSpeak-compatible WebAssembly frontend converts chunks to phonemes.
+3. Two local ONNX graphs generate a 24 kHz mono waveform in a worker.
+4. Obsidian queues each completed chunk through Web Audio, allowing playback to begin before a long selection has fully synthesized.
+
+The initial model download comes from the official [`owensong/Inflect-Micro-v2-ONNX`](https://huggingface.co/owensong/Inflect-Micro-v2-ONNX) export. The pinned ONNX Runtime Web assets are downloaded once from jsDelivr. Graph and runtime bytes are cached locally and verified against their stored SHA-256 cache manifest before reuse.
+
+### Model scope
+
+Inflect Micro v2 provides one fixed English male voice. It is not voice cloning, multilingual TTS, or a streaming acoustic model. Pronunciation of unfamiliar names, abbreviations, and unusual phrasing can vary.
 
 ---
 

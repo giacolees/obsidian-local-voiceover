@@ -16,6 +16,7 @@ export class SpeechWorkerClient {
 	private rejectReady!: (error: Error) => void;
 	private readonly pending = new Map<number, PendingRun>();
 	private nextId = 1;
+	backend: "webgpu" | "wasm" = "wasm";
 
 	constructor(workerSource: string) {
 		const workerUrl = URL.createObjectURL(
@@ -58,6 +59,7 @@ export class SpeechWorkerClient {
 
 	private handleMessage(message: Record<string, unknown>): void {
 		if (message.type === "ready") {
+			this.backend = message.backend === "webgpu" ? "webgpu" : "wasm";
 			this.resolveReady();
 			return;
 		}

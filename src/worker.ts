@@ -26,7 +26,7 @@ async function handleMessage(message: InitMessage | SynthesizeMessage | AbortMes
 				loadModel: async (name: "inflect-core.onnx" | "inflect-decoder.onnx") => message.models[name],
 				wasmPaths: message.wasmPaths as unknown as string,
 			});
-			post({ type: "ready" });
+			post({ type: "ready", backend: inference.backend, fallbackReason: inference.fallbackReason });
 		} catch (error) {
 			post({ type: "init-error", message: errorMessage(error) });
 		}

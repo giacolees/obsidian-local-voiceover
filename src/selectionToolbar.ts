@@ -6,6 +6,7 @@ export type VoiceoverState = "idle" | "loading" | "generating" | "speaking";
 
 export interface SelectionToolbarActions {
 	getState(): VoiceoverState;
+	getBackend(): "webgpu" | "wasm" | null;
 	isHighlightEnabled(): boolean;
 	speak(text: string): void;
 	stop(): void;
@@ -180,7 +181,9 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 				}
 				this.playButton.disabled = state !== "idle";
 				this.stopButton.disabled = state === "idle";
-				this.status.setText(({ idle: "Ready", loading: "Loading", generating: "Generating", speaking: "Speaking" })[state]);
+				const label = ({ idle: "Ready", loading: "Loading", generating: "Generating", speaking: "Speaking" })[state];
+				const backend = actions.getBackend();
+				this.status.setText(backend ? `${label} · ${backend === "webgpu" ? "WebGPU" : "WASM"}` : label);
 				this.toolbar.style.left = `${coords.left}px`;
 				this.toolbar.style.top = `${Math.max(8, coords.top - 8)}px`;
 				this.toolbar.show();

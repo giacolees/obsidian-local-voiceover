@@ -24,6 +24,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 			playbackHighlightExtension,
 			createSelectionToolbarExtension({
 				getState: () => this.state,
+				getBackend: () => this.worker?.backend ?? null,
 				isHighlightEnabled: () => this.settings.highlightSpokenText,
 				speak: (text) => void this.speak(text),
 				stop: () => this.stop(),
@@ -134,6 +135,8 @@ export default class LocalVoiceoverPlugin extends Plugin {
 				},
 			);
 			this.worker = worker;
+			new Notice(`Local voice model is using ${worker.backend === "webgpu" ? "WebGPU" : "WASM"}.`);
+			window.dispatchEvent(new Event("local-voiceover-state"));
 			return worker;
 		}).finally(() => {
 			this.loading = null;

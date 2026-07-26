@@ -19,15 +19,35 @@ export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" 
 		globalThis.process = undefined;
 		ort.env.wasm.wasmPaths = wasmPaths;
 		ort.env.wasm.numThreads = 1;
-		const [core, decoder, frontend] = await Promise.all([
-			loadModel("inflect-core.onnx").then((model) =>
-				ort.InferenceSession.create(model, { executionProviders: ["wasm"] }),
-			),
-			loadModel("inflect-decoder.onnx").then((model) =>
-				ort.InferenceSession.create(model, { executionProviders: ["wasm"] }),
-			),
+		const [coreModel, decoderModel, frontend] = await Promise.all([
+			loadModel("inflect-core.onnx"),
+			loadModel("inflect-decoder.onnx"),
 			createInflectFrontend(),
 		]);
+		const createSessions = async (provider) => {
+			let coreSession;
+			try {
+				coreSession = await ort.InferenceSession.create(coreModel.slice(0), { executionProviders: [provider] });
+				const decoderSession = await ort.InferenceSession.create(decoderModel.slice(0), { executionProviders: [provider] });
+				return [coreSession, decoderSession];
+			} catch (error) {
+				await coreSession?.release?.();
+				throw error;
+			}
+		};
+		let core;
+		let decoder;
+		let backend = "wasm";
+		let fallbackReason;
+		if (globalThis.navigator?.gpu) {
+			try {
+				[core, decoder] = await createSessions("webgpu");
+				backend = "webgpu";
+			} catch (error) {
+				fallbackReason = error instanceof Error ? error.message : String(error);
+			}
+		}
+		if (!core || !decoder) [core, decoder] = await createSessions("wasm");
 
 		const synthesizeChunk = async (output, seed, zeroNoise) => {
 			if (output.ids.length > MAX_TOKENS)
@@ -76,6 +96,8 @@ export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" 
 		};
 
 		return {
+			backend,
+			fallbackReason,
 			frontend,
 			async synthesize(text, { zeroNoise = false, onChunk, signal } = {}) {
 				const outputs = frontend.phonemizeChunks(text);

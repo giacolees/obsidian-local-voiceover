@@ -1,6 +1,6 @@
 {
   "name": "obsidian-local-voiceover",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "Desktop Obsidian plugin for local Inflect Micro v2 voiceover",
   "main": "main.js",
   "scripts": {

@@ -105,6 +105,12 @@ npm run check    # build, lint, markdown, unused-code, cycle, and duplicate chec
 
 ---
 
+## Other projects
+
+- [Obsidian Math Convert](https://github.com/giacolees/obsidian-math-convert) — convert math formula images to LaTeX locally with FormulaNet, Transformers.js, and ONNX; no API key required.
+
+---
+
 ## License and provenance
 
 Local Voiceover is licensed under **GPL-3.0-or-later** because it bundles [`ephone`](https://github.com/sjmik/ephone-js), an eSpeak-NG WebAssembly frontend under GPL-3.0-or-later. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [third_party/EPHONE_COPYING.txt](third_party/EPHONE_COPYING.txt), and [UPSTREAM_INFLECT_LICENSE](UPSTREAM_INFLECT_LICENSE).

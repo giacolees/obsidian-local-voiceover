@@ -1,7 +1,7 @@
 {
 	"id": "local-voiceover",
 	"name": "Local Voiceover - Private TTS",
-	"version": "1.0.8",
+	"version": "1.0.9",
 	"minAppVersion": "1.7.2",
 	"description": "Speak selected text with local Inflect Micro v2 synthesis.",
 	"author": "giacomolisita",

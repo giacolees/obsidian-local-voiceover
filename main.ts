@@ -71,6 +71,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		const abort = new AbortController();
 		this.abortController = abort;
 		this.clearHighlight();
+		window.dispatchEvent(new Event("local-voiceover-playback-start"));
 		this.setState("loading");
 		try {
 			await this.player.start();

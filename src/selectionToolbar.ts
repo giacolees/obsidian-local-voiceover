@@ -41,13 +41,19 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 			private readonly status: HTMLElement;
 			private selectedText = "";
 			private selectedFrom = 0;
+			private playbackText = "";
+			private playbackFrom = 0;
 			private highlightOffset = 0;
 			private destroyed = false;
 			private clearPending = false;
 			private readonly refresh = () => this.scheduleRender();
 			private readonly highlightChunk = (event: Event) => this.applyChunkHighlight(event);
-			private readonly clearHighlight = () => {
+			private readonly startPlayback = () => {
+				this.playbackText = this.selectedText;
+				this.playbackFrom = this.selectedFrom;
 				this.highlightOffset = 0;
+			};
+			private readonly clearHighlight = () => {
 				if (this.clearPending) return;
 				this.clearPending = true;
 				window.setTimeout(() => {
@@ -74,6 +80,7 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 				this.stopButton.addEventListener("click", () => actions.stop());
 				window.addEventListener("local-voiceover-state", this.refresh);
 				window.addEventListener("local-voiceover-highlight", this.highlightChunk);
+				window.addEventListener("local-voiceover-playback-start", this.startPlayback);
 				window.addEventListener("local-voiceover-highlight-clear", this.clearHighlight);
 				this.scheduleRender();
 			}
@@ -86,6 +93,7 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 				this.destroyed = true;
 				window.removeEventListener("local-voiceover-state", this.refresh);
 				window.removeEventListener("local-voiceover-highlight", this.highlightChunk);
+				window.removeEventListener("local-voiceover-playback-start", this.startPlayback);
 				window.removeEventListener("local-voiceover-highlight-clear", this.clearHighlight);
 				this.toolbar.remove();
 			}
@@ -95,7 +103,7 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 				this.selectedFrom = selection.from;
 				this.selectedText = this.view.state.sliceDoc(selection.from, selection.to).trim();
 				if (!this.selectedText || !this.view.hasFocus) {
-					this.clearHighlight();
+					if (actions.getState() === "idle") this.clearHighlight();
 					this.applyPosition(null, actions.getState());
 					return;
 				}
@@ -106,14 +114,14 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 			}
 
 			private applyChunkHighlight(event: Event): void {
-				if (!actions.isHighlightEnabled() || !this.selectedText) return;
+				if (!actions.isHighlightEnabled() || !this.playbackText) return;
 				const source = (event as CustomEvent<{ source?: string }>).detail?.source;
 				if (!source) return;
-				const offset = this.selectedText.indexOf(source, this.highlightOffset);
+				const offset = this.playbackText.indexOf(source, this.highlightOffset);
 				if (offset < 0) return;
 				this.highlightOffset = offset + source.length;
 				this.view.dispatch({
-					effects: setPlaybackHighlight.of({ from: this.selectedFrom + offset, to: this.selectedFrom + offset + source.length }),
+					effects: setPlaybackHighlight.of({ from: this.playbackFrom + offset, to: this.playbackFrom + offset + source.length }),
 				});
 			}
 

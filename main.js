@@ -198,13 +198,19 @@ function createSelectionToolbarExtension(actions) {
         this.view = view;
         this.selectedText = "";
         this.selectedFrom = 0;
+        this.playbackText = "";
+        this.playbackFrom = 0;
         this.highlightOffset = 0;
         this.destroyed = false;
         this.clearPending = false;
         this.refresh = () => this.scheduleRender();
         this.highlightChunk = (event) => this.applyChunkHighlight(event);
-        this.clearHighlight = () => {
+        this.startPlayback = () => {
+          this.playbackText = this.selectedText;
+          this.playbackFrom = this.selectedFrom;
           this.highlightOffset = 0;
+        };
+        this.clearHighlight = () => {
           if (this.clearPending)
             return;
           this.clearPending = true;
@@ -232,6 +238,7 @@ function createSelectionToolbarExtension(actions) {
         this.stopButton.addEventListener("click", () => actions.stop());
         window.addEventListener("local-voiceover-state", this.refresh);
         window.addEventListener("local-voiceover-highlight", this.highlightChunk);
+        window.addEventListener("local-voiceover-playback-start", this.startPlayback);
         window.addEventListener("local-voiceover-highlight-clear", this.clearHighlight);
         this.scheduleRender();
       }
@@ -243,6 +250,7 @@ function createSelectionToolbarExtension(actions) {
         this.destroyed = true;
         window.removeEventListener("local-voiceover-state", this.refresh);
         window.removeEventListener("local-voiceover-highlight", this.highlightChunk);
+        window.removeEventListener("local-voiceover-playback-start", this.startPlayback);
         window.removeEventListener("local-voiceover-highlight-clear", this.clearHighlight);
         this.toolbar.remove();
       }
@@ -251,7 +259,8 @@ function createSelectionToolbarExtension(actions) {
         this.selectedFrom = selection.from;
         this.selectedText = this.view.state.sliceDoc(selection.from, selection.to).trim();
         if (!this.selectedText || !this.view.hasFocus) {
-          this.clearHighlight();
+          if (actions.getState() === "idle")
+            this.clearHighlight();
           this.applyPosition(null, actions.getState());
           return;
         }
@@ -261,17 +270,17 @@ function createSelectionToolbarExtension(actions) {
         });
       }
       applyChunkHighlight(event) {
-        if (!actions.isHighlightEnabled() || !this.selectedText)
+        if (!actions.isHighlightEnabled() || !this.playbackText)
           return;
         const source = event.detail?.source;
         if (!source)
           return;
-        const offset = this.selectedText.indexOf(source, this.highlightOffset);
+        const offset = this.playbackText.indexOf(source, this.highlightOffset);
         if (offset < 0)
           return;
         this.highlightOffset = offset + source.length;
         this.view.dispatch({
-          effects: setPlaybackHighlight.of({ from: this.selectedFrom + offset, to: this.selectedFrom + offset + source.length })
+          effects: setPlaybackHighlight.of({ from: this.playbackFrom + offset, to: this.playbackFrom + offset + source.length })
         });
       }
       applyPosition(coords, state) {
@@ -452,6 +461,7 @@ var LocalVoiceoverPlugin = class extends import_obsidian4.Plugin {
     const abort = new AbortController();
     this.abortController = abort;
     this.clearHighlight();
+    window.dispatchEvent(new Event("local-voiceover-playback-start"));
     this.setState("loading");
     try {
       await this.player.start();

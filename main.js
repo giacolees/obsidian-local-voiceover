@@ -381,23 +381,51 @@ var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     new import_obsidian3.Setting(containerEl).setName("Speed").setDesc("Speech speed. Lower is slower.").addSlider((slider) => {
-      const output = slider.sliderEl.parentElement.createEl("output", {
+      const input = slider.sliderEl.parentElement.createEl("input", {
         cls: "local-voiceover-slider-value",
-        text: this.voiceover.settings.speed.toFixed(2)
+        type: "number",
+        value: this.voiceover.settings.speed.toFixed(2)
       });
+      input.min = "0.5";
+      input.max = "2";
+      input.step = "0.05";
+      input.addEventListener("change", () => void (async () => {
+        const value = Number(input.value);
+        if (!Number.isFinite(value))
+          return;
+        this.voiceover.settings.speed = value;
+        normalizeSpeechSettings(this.voiceover.settings);
+        input.value = this.voiceover.settings.speed.toFixed(2);
+        slider.setValue(this.voiceover.settings.speed);
+        await this.voiceover.saveSettings();
+      })());
       return slider.setLimits(0.5, 2, 0.05).setValue(this.voiceover.settings.speed).onChange(async (value) => {
-        output.setText(value.toFixed(2));
+        input.value = value.toFixed(2);
         this.voiceover.settings.speed = value;
         await this.voiceover.saveSettings();
       });
     });
     new import_obsidian3.Setting(containerEl).setName("Variation").setDesc("Voice variation. Lower is steadier.").addSlider((slider) => {
-      const output = slider.sliderEl.parentElement.createEl("output", {
+      const input = slider.sliderEl.parentElement.createEl("input", {
         cls: "local-voiceover-slider-value",
-        text: this.voiceover.settings.variation.toFixed(2)
+        type: "number",
+        value: this.voiceover.settings.variation.toFixed(2)
       });
+      input.min = "0";
+      input.max = "1";
+      input.step = "0.01";
+      input.addEventListener("change", () => void (async () => {
+        const value = Number(input.value);
+        if (!Number.isFinite(value))
+          return;
+        this.voiceover.settings.variation = value;
+        normalizeSpeechSettings(this.voiceover.settings);
+        input.value = this.voiceover.settings.variation.toFixed(2);
+        slider.setValue(this.voiceover.settings.variation);
+        await this.voiceover.saveSettings();
+      })());
       return slider.setLimits(0, 1, 0.01).setValue(this.voiceover.settings.variation).onChange(async (value) => {
-        output.setText(value.toFixed(2));
+        input.value = value.toFixed(2);
         this.voiceover.settings.variation = value;
         await this.voiceover.saveSettings();
       });

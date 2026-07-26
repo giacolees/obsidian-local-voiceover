@@ -121,14 +121,14 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		const pluginDirectory = normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
 		const cache = new ModelCache(this.app.vault.adapter, pluginDirectory);
 		this.loading = Promise.all([
-			cache.loadModel("inflect-core.onnx", () => undefined),
-			cache.loadModel("inflect-decoder.onnx", () => undefined),
+			cache.loadModel("duration.onnx", () => undefined),
+			cache.loadModel("decode.onnx", () => undefined),
 			cache.loadRuntime("ort-wasm-simd-threaded.jsep.mjs", () => undefined),
 			cache.loadRuntime("ort-wasm-simd-threaded.jsep.wasm", () => undefined),
 		]).then(async ([core, decoder]) => {
 			const worker = new SpeechWorkerClient(workerSource);
 			await worker.initialize(
-				{ "inflect-core.onnx": core, "inflect-decoder.onnx": decoder },
+				{ "duration.onnx": core, "decode.onnx": decoder },
 				{
 					mjs: cache.resourcePath("ort-wasm-simd-threaded.jsep.mjs"),
 					wasm: cache.resourcePath("ort-wasm-simd-threaded.jsep.wasm"),

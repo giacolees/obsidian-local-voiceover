@@ -2,7 +2,7 @@ import { createInflectInference } from "./port/inference.mjs";
 
 type InitMessage = {
 	type: "init";
-	models: Record<"inflect-core.onnx" | "inflect-decoder.onnx", ArrayBuffer>;
+	models: Record<"duration.onnx" | "decode.onnx", ArrayBuffer>;
 	wasmPaths: { mjs: string; wasm: string };
 };
 type SynthesizeMessage = { type: "synthesize"; id: number; text: string };
@@ -23,7 +23,7 @@ async function handleMessage(message: InitMessage | SynthesizeMessage | AbortMes
 	if (message.type === "init") {
 		try {
 			inference = await createInflectInference({
-				loadModel: async (name: "inflect-core.onnx" | "inflect-decoder.onnx") => message.models[name],
+				loadModel: async (name: "duration.onnx" | "decode.onnx") => message.models[name],
 				wasmPaths: message.wasmPaths as unknown as string,
 			});
 			post({ type: "ready", backend: inference.backend, fallbackReason: inference.fallbackReason });

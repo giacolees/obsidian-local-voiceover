@@ -1,12 +1,17 @@
 import { normalizePath, requestUrl, type DataAdapter } from "obsidian";
 
-export const MODEL_BASE_URL = "https://huggingface.co/giacolees/Inflect-Micro-v2-ONNX/resolve/main";
+export const MODEL_BASE_URL = "https://huggingface.co/owensong/Inflect-Micro-v2-ONNX/resolve/51618dec4d1a9a948fe15de45efe6a175eea8c54/onnx";
 export const ORT_BASE_URL = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist";
 export type CacheAsset =
-	| "inflect-core.onnx"
-	| "inflect-decoder.onnx"
+	| "duration.onnx"
+	| "decode.onnx"
 	| "ort-wasm-simd-threaded.jsep.mjs"
 	| "ort-wasm-simd-threaded.jsep.wasm";
+
+const OFFICIAL_MODEL_HASHES: Record<"duration.onnx" | "decode.onnx", string> = {
+	"duration.onnx": "b728ca2564b9e5b7d6cf5e446f65e02a6fe2f1880ba281466fec93a667dd2388",
+	"decode.onnx": "7940923add86f76e7fa78d910b0632ca1779f8cc9a2ca2b49236381a9ca77183",
+};
 
 interface CacheRecord {
 	url: string;
@@ -14,7 +19,7 @@ interface CacheRecord {
 	bytes: number;
 }
 interface CacheManifest {
-	version: 2;
+	version: 3;
 	assets: Partial<Record<CacheAsset, CacheRecord>>;
 }
 
@@ -26,7 +31,7 @@ export class ModelCache {
 		this.root = normalizePath(`${pluginDirectory}/runtime-cache`);
 	}
 
-	loadModel(name: "inflect-core.onnx" | "inflect-decoder.onnx", onProgress: Progress): Promise<ArrayBuffer> {
+	loadModel(name: "duration.onnx" | "decode.onnx", onProgress: Progress): Promise<ArrayBuffer> {
 		return this.load(name, MODEL_BASE_URL, onProgress);
 	}
 
@@ -56,8 +61,11 @@ export class ModelCache {
 		const bytes = response.arrayBuffer;
 		onProgress(bytes.byteLength, bytes.byteLength);
 		await this.ensureRoot();
+		const digest = await sha256(bytes);
+		if (baseUrl === MODEL_BASE_URL && digest !== OFFICIAL_MODEL_HASHES[name as "duration.onnx" | "decode.onnx"])
+			throw new Error(`Downloaded ${name} failed its official SHA-256 verification.`);
 		await this.adapter.writeBinary(path, bytes);
-		manifest.assets[name] = { url, sha256: await sha256(bytes), bytes: bytes.byteLength };
+		manifest.assets[name] = { url, sha256: digest, bytes: bytes.byteLength };
 		await this.adapter.write(this.manifestPath(), JSON.stringify(manifest));
 		return bytes;
 	}
@@ -67,7 +75,7 @@ export class ModelCache {
 		const path = this.manifestPath();
 		this.manifest = (await this.adapter.exists(path))
 			? (JSON.parse(await this.adapter.read(path)) as CacheManifest)
-			: { version: 2, assets: {} };
+			: { version: 3, assets: {} };
 		return this.manifest;
 	}
 	private async ensureRoot(): Promise<void> {

@@ -2,7 +2,7 @@
 
 **Select a passage. Hear it in seconds. Never send your notes to a voice provider.**
 
-Local Voiceover turns the selected text in an Obsidian note into speech directly on your desktop. It runs [Inflect Micro v2](https://huggingface.co/owensong/Inflect-Micro-v2) locally through ONNX Runtime Web and WebAssembly: no API key, account, Python installation, or uploaded note content.
+Local Voiceover turns the selected text in an Obsidian note into speech directly on your desktop. It runs [Inflect Micro v2](https://huggingface.co/owensong/Inflect-Micro-v2) locally through ONNX Runtime Web, preferring WebGPU with a WebAssembly fallback: no API key, account, Python installation, or uploaded note content.
 
 > **Built for focused reading.** Inflect Micro v2 is a compact 9.36 M-parameter English text-to-waveform model. Local Voiceover keeps its phonemizer and ONNX graphs in a worker, so long passages can synthesize without freezing the editor. The first run downloads roughly 38 MB of model graphs plus its runtime assets; later playback works from the local cache, including offline.
 
@@ -29,7 +29,7 @@ Local Voiceover adapts the browser port of Inflect Micro v2 into an Obsidian plu
 3. Two local ONNX graphs generate a 24 kHz mono waveform in a worker.
 4. Obsidian queues each completed chunk through Web Audio, allowing playback to begin before a long selection has fully synthesized.
 
-The initial model download comes from [`giacolees/Inflect-Micro-v2-ONNX`](https://huggingface.co/giacolees/Inflect-Micro-v2-ONNX). The pinned ONNX Runtime Web assets are downloaded once from jsDelivr. Graph and runtime bytes are cached locally and verified against their stored SHA-256 cache manifest before reuse.
+The initial model download comes from the official [`owensong/Inflect-Micro-v2-ONNX`](https://huggingface.co/owensong/Inflect-Micro-v2-ONNX) export. The pinned ONNX Runtime Web assets are downloaded once from jsDelivr. Graph and runtime bytes are cached locally and verified against their stored SHA-256 cache manifest before reuse.
 
 ### Model scope
 

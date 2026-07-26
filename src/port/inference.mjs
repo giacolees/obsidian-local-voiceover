@@ -6,10 +6,9 @@ export const SAMPLE_RATE = 24000;
 
 /**
  * Runs the official Inflect Micro v2 FP32 ONNX export in a browser worker.
- * Both graphs use one execution provider so WebGPU initialization can fall
- * back atomically to WASM.
+ * Both graphs run through ONNX Runtime WebAssembly for predictable desktop compatibility.
  */
-export async function createInflectInference({ loadModel, wasmPaths = "./wasm/", onBackend }) {
+export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" }) {
 	const nodeProcess = globalThis.process;
 	try {
 		globalThis.process = undefined;
@@ -31,28 +30,7 @@ export async function createInflectInference({ loadModel, wasmPaths = "./wasm/",
 				throw error;
 			}
 		};
-		let duration;
-		let decode;
-		let backend = "wasm";
-		let fallbackReason;
-		if (globalThis.navigator?.gpu) {
-			try {
-				[duration, decode] = await createSessions("webgpu");
-				backend = "webgpu";
-			} catch (error) {
-				fallbackReason = error instanceof Error ? error.message : String(error);
-			}
-		}
-		if (!duration || !decode) [duration, decode] = await createSessions("wasm");
-		onBackend?.(backend, fallbackReason);
-		const switchToWasm = async (error) => {
-			if (backend !== "webgpu") throw error;
-			fallbackReason = error instanceof Error ? error.message : String(error);
-			await Promise.all([duration.release?.(), decode.release?.()]);
-			[duration, decode] = await createSessions("wasm");
-			backend = "wasm";
-			onBackend?.(backend, fallbackReason);
-		};
+		const [duration, decode] = await createSessions("wasm");
 
 		const runChunk = async (output, seed, speed, variation) => {
 			if (output.ids.length > MAX_TOKENS)
@@ -73,18 +51,10 @@ export async function createInflectInference({ loadModel, wasmPaths = "./wasm/",
 			})).waveform.data;
 			return { waveform };
 		};
-		const synthesizeChunk = async (output, seed, speed, variation) => {
-			try {
-				return await runChunk(output, seed, speed, variation);
-			} catch (error) {
-				await switchToWasm(error);
-				return runChunk(output, seed, speed, variation);
-			}
-		};
+		const synthesizeChunk = (output, seed, speed, variation) =>
+			runChunk(output, seed, speed, variation);
 
 		return {
-			backend,
-			fallbackReason,
 			frontend,
 			async synthesize(text, { speed = 1, variation = 0.667, seed = 0, onChunk, signal } = {}) {
 				const outputs = frontend.phonemizeChunks(text);

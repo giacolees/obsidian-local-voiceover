@@ -20,14 +20,10 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		await this.loadSettings();
 		this.player.setOnStateChange(() => this.syncPlaybackState());
 		this.addSettingTab(new LocalVoiceoverSettingTab(this.app, this));
-		const onBackend = (event: Event) => this.reportBackend(event);
-		window.addEventListener("local-voiceover-backend", onBackend);
-		this.register(() => window.removeEventListener("local-voiceover-backend", onBackend));
 		this.registerEditorExtension([
 			playbackHighlightExtension,
 			createSelectionToolbarExtension({
 				getState: () => this.state,
-				getBackend: () => this.worker?.backend ?? null,
 				isHighlightEnabled: () => this.settings.highlightSpokenText,
 				speak: (text) => void this.speak(text),
 				stop: () => this.stop(),
@@ -66,13 +62,6 @@ export default class LocalVoiceoverPlugin extends Plugin {
 
 	private unlockPlaybackRange(): void {
 		window.dispatchEvent(new Event("local-voiceover-range-unlock"));
-	}
-
-	private reportBackend(event: Event): void {
-		const detail = (event as CustomEvent<{ backend?: string; fallbackReason?: string | null }>).detail;
-		if (detail?.backend !== "wasm" || !detail.fallbackReason) return;
-		console.warn("Local Voiceover WebGPU failed; switched to WASM.", detail.fallbackReason);
-		new Notice("Hardware acceleration failed; Local voiceover switched to wasm. See the developer console for details.");
 	}
 
 	private speakCommand(checking: boolean, editor: Editor): boolean {
@@ -151,9 +140,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 				},
 			);
 			this.worker = worker;
-			new Notice(`Local voice model is using ${worker.backend === "webgpu" ? "WebGPU" : "WASM"}.`);
-			if (worker.fallbackReason)
-				console.warn("Local Voiceover WebGPU failed during initialization; using WASM.", worker.fallbackReason);
+			new Notice("Local voice model is ready.");
 			window.dispatchEvent(new Event("local-voiceover-state"));
 			return worker;
 		}).finally(() => {

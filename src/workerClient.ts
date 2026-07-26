@@ -22,8 +22,6 @@ export class SpeechWorkerClient {
 	private rejectReady!: (error: Error) => void;
 	private readonly pending = new Map<number, PendingRun>();
 	private nextId = 1;
-	backend: "webgpu" | "wasm" = "wasm";
-	fallbackReason: string | null = null;
 
 	constructor(workerSource: string) {
 		const workerUrl = URL.createObjectURL(
@@ -65,16 +63,7 @@ export class SpeechWorkerClient {
 	}
 
 	private handleMessage(message: Record<string, unknown>): void {
-		if (message.type === "backend") {
-			this.backend = message.backend === "webgpu" ? "webgpu" : "wasm";
-			this.fallbackReason = typeof message.fallbackReason === "string" ? message.fallbackReason : null;
-			window.dispatchEvent(new Event("local-voiceover-state"));
-			window.dispatchEvent(new CustomEvent("local-voiceover-backend", { detail: { backend: this.backend, fallbackReason: this.fallbackReason } }));
-			return;
-		}
 		if (message.type === "ready") {
-			this.backend = message.backend === "webgpu" ? "webgpu" : "wasm";
-			this.fallbackReason = typeof message.fallbackReason === "string" ? message.fallbackReason : null;
 			this.resolveReady();
 			return;
 		}

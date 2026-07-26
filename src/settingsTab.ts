@@ -24,13 +24,13 @@ export class LocalVoiceoverSettingTab extends PluginSettingTab {
 			.addSlider((slider) => {
 				const output = (slider.sliderEl.parentElement as HTMLElement).createEl("output", {
 					cls: "local-voiceover-slider-value",
-					value: this.voiceover.settings.speed.toFixed(2),
+					text: this.voiceover.settings.speed.toFixed(2),
 				});
 				return slider
 					.setLimits(0.5, 2, 0.05)
 					.setValue(this.voiceover.settings.speed)
 					.onChange(async (value) => {
-						output.value = value.toFixed(2);
+						output.setText(value.toFixed(2));
 						this.voiceover.settings.speed = value;
 						await this.voiceover.saveSettings();
 					});
@@ -41,13 +41,13 @@ export class LocalVoiceoverSettingTab extends PluginSettingTab {
 			.addSlider((slider) => {
 				const output = (slider.sliderEl.parentElement as HTMLElement).createEl("output", {
 					cls: "local-voiceover-slider-value",
-					value: this.voiceover.settings.variation.toFixed(2),
+					text: this.voiceover.settings.variation.toFixed(2),
 				});
 				return slider
 					.setLimits(0, 1, 0.01)
 					.setValue(this.voiceover.settings.variation)
 					.onChange(async (value) => {
-						output.value = value.toFixed(2);
+						output.setText(value.toFixed(2));
 						this.voiceover.settings.variation = value;
 						await this.voiceover.saveSettings();
 					});

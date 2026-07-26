@@ -127,7 +127,6 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 			}
 
 			update(update: ViewUpdate): void {
-				if (update.selectionSet && actions.getState() !== "idle") this.clearLock();
 				if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged) this.scheduleRender();
 			}
 

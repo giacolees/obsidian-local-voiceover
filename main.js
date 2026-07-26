@@ -289,8 +289,6 @@ function createSelectionToolbarExtension(actions) {
         this.scheduleRender();
       }
       update(update) {
-        if (update.selectionSet && actions.getState() !== "idle")
-          this.clearLock();
         if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged)
           this.scheduleRender();
       }

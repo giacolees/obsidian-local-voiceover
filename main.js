@@ -176,7 +176,7 @@ var spokenRangeLock = import_state.StateEffect.define();
 var spokenRangeLockField = import_state.StateField.define({
   create: () => null,
   update(value, transaction) {
-    let next = value ? { from: transaction.changes.mapPos(value.from), to: transaction.changes.mapPos(value.to, 1) } : null;
+    let next = value ? { from: transaction.changes.mapPos(value.from, 1), to: transaction.changes.mapPos(value.to, -1) } : null;
     for (const effect of transaction.effects)
       if (effect.is(spokenRangeLock))
         next = effect.value;

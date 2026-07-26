@@ -16,7 +16,8 @@ const spokenRangeLock = StateEffect.define<{ from: number; to: number } | null>(
 const spokenRangeLockField = StateField.define<{ from: number; to: number } | null>({
 	create: () => null,
 	update(value, transaction) {
-		let next = value ? { from: transaction.changes.mapPos(value.from), to: transaction.changes.mapPos(value.to, 1) } : null;
+		// Insertions at the end belong after the protected source range, not inside it.
+		let next = value ? { from: transaction.changes.mapPos(value.from, 1), to: transaction.changes.mapPos(value.to, -1) } : null;
 		for (const effect of transaction.effects) if (effect.is(spokenRangeLock)) next = effect.value;
 		return next;
 	},

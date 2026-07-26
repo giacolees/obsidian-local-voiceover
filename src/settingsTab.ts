@@ -7,6 +7,15 @@ type SettingsPlugin = {
 	clearHighlight(): void;
 };
 
+function addInfo(setting: Setting, explanation: string): void {
+	const button = setting.nameEl.createEl("button", {
+		cls: "local-voiceover-setting-info",
+		attr: { type: "button", "aria-label": explanation },
+	});
+	button.setText("I");
+	button.createSpan({ cls: "local-voiceover-setting-tooltip", text: explanation });
+}
+
 export class LocalVoiceoverSettingTab extends PluginSettingTab {
 	private readonly voiceover: SettingsPlugin;
 
@@ -18,87 +27,72 @@ export class LocalVoiceoverSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		new Setting(containerEl)
-			.setName("Speed")
-			.setDesc("Speech speed. Lower is slower.")
-			.addSlider((slider) => {
-				const input = (slider.sliderEl.parentElement as HTMLElement).createEl("input", {
-					cls: "local-voiceover-slider-value",
-					type: "number",
-					value: this.voiceover.settings.speed.toFixed(2),
-				});
-				input.min = "0.5";
-				input.max = "2";
-				input.step = "0.05";
-				input.addEventListener("change", () => void (async () => {
-					const value = Number(input.value);
-					if (!Number.isFinite(value)) return;
-					this.voiceover.settings.speed = value;
-					normalizeSpeechSettings(this.voiceover.settings);
-					input.value = this.voiceover.settings.speed.toFixed(2);
-					slider.setValue(this.voiceover.settings.speed);
-					await this.voiceover.saveSettings();
-				})());
-				return slider
-					.setLimits(0.5, 2, 0.05)
-					.setValue(this.voiceover.settings.speed)
-					.onChange(async (value) => {
-						input.value = value.toFixed(2);
-						this.voiceover.settings.speed = value;
-						await this.voiceover.saveSettings();
-					});
+		const speed = new Setting(containerEl).setName("Speed");
+		addInfo(speed, "Speech speed. Lower is slower. Choose a value from 0.5 to 2.0.");
+		speed.addSlider((slider) => {
+			const input = (slider.sliderEl.parentElement as HTMLElement).createEl("input", {
+				cls: "local-voiceover-slider-value", type: "number", value: this.voiceover.settings.speed.toFixed(2),
 			});
-		new Setting(containerEl)
-			.setName("Variation")
-			.setDesc("Voice variation. Lower is steadier.")
-			.addSlider((slider) => {
-				const input = (slider.sliderEl.parentElement as HTMLElement).createEl("input", {
-					cls: "local-voiceover-slider-value",
-					type: "number",
-					value: this.voiceover.settings.variation.toFixed(2),
-				});
-				input.min = "0";
-				input.max = "1";
-				input.step = "0.01";
-				input.addEventListener("change", () => void (async () => {
-					const value = Number(input.value);
-					if (!Number.isFinite(value)) return;
-					this.voiceover.settings.variation = value;
-					normalizeSpeechSettings(this.voiceover.settings);
-					input.value = this.voiceover.settings.variation.toFixed(2);
-					slider.setValue(this.voiceover.settings.variation);
-					await this.voiceover.saveSettings();
-				})());
-				return slider
-					.setLimits(0, 1, 0.01)
-					.setValue(this.voiceover.settings.variation)
-					.onChange(async (value) => {
-						input.value = value.toFixed(2);
-						this.voiceover.settings.variation = value;
-						await this.voiceover.saveSettings();
-					});
+			input.min = "0.5";
+			input.max = "2";
+			input.step = "0.05";
+			input.addEventListener("change", () => void (async () => {
+				const value = Number(input.value);
+				if (!Number.isFinite(value)) return;
+				this.voiceover.settings.speed = value;
+				normalizeSpeechSettings(this.voiceover.settings);
+				input.value = this.voiceover.settings.speed.toFixed(2);
+				slider.setValue(this.voiceover.settings.speed);
+				await this.voiceover.saveSettings();
+			})());
+			return slider.setLimits(0.5, 2, 0.05).setValue(this.voiceover.settings.speed).onChange(async (value) => {
+				input.value = value.toFixed(2);
+				this.voiceover.settings.speed = value;
+				await this.voiceover.saveSettings();
 			});
-		new Setting(containerEl)
-			.setName("Seed")
-			.setDesc("A safe integer. The same seed repeats the same sample on this runtime.")
-			.addText((text) =>
-				text.setValue(String(this.voiceover.settings.seed)).onChange(async (value) => {
-					const seed = Number(value);
-					if (!Number.isSafeInteger(seed)) return;
-					this.voiceover.settings.seed = seed;
-					normalizeSpeechSettings(this.voiceover.settings);
-					await this.voiceover.saveSettings();
-				}),
-			);
-		new Setting(containerEl)
-			.setName("Highlight spoken text")
-			.setDesc("Highlight the currently playing text chunk in the editor.")
-			.addToggle((toggle) =>
-				toggle.setValue(this.voiceover.settings.highlightSpokenText).onChange(async (value) => {
-					this.voiceover.settings.highlightSpokenText = value;
-					this.voiceover.clearHighlight();
-					await this.voiceover.saveSettings();
-				}),
-			);
+		});
+
+		const variation = new Setting(containerEl).setName("Variation");
+		addInfo(variation, "Voice variation. Lower is steadier. Choose a value from 0 to 1.");
+		variation.addSlider((slider) => {
+			const input = (slider.sliderEl.parentElement as HTMLElement).createEl("input", {
+				cls: "local-voiceover-slider-value", type: "number", value: this.voiceover.settings.variation.toFixed(2),
+			});
+			input.min = "0";
+			input.max = "1";
+			input.step = "0.01";
+			input.addEventListener("change", () => void (async () => {
+				const value = Number(input.value);
+				if (!Number.isFinite(value)) return;
+				this.voiceover.settings.variation = value;
+				normalizeSpeechSettings(this.voiceover.settings);
+				input.value = this.voiceover.settings.variation.toFixed(2);
+				slider.setValue(this.voiceover.settings.variation);
+				await this.voiceover.saveSettings();
+			})());
+			return slider.setLimits(0, 1, 0.01).setValue(this.voiceover.settings.variation).onChange(async (value) => {
+				input.value = value.toFixed(2);
+				this.voiceover.settings.variation = value;
+				await this.voiceover.saveSettings();
+			});
+		});
+
+		const seed = new Setting(containerEl).setName("Seed");
+		addInfo(seed, "A safe integer. The same seed repeats the same sample on this runtime.");
+		seed.addText((text) => text.setValue(String(this.voiceover.settings.seed)).onChange(async (value) => {
+			const parsed = Number(value);
+			if (!Number.isSafeInteger(parsed)) return;
+			this.voiceover.settings.seed = parsed;
+			normalizeSpeechSettings(this.voiceover.settings);
+			await this.voiceover.saveSettings();
+		}));
+
+		const highlight = new Setting(containerEl).setName("Highlight spoken text");
+		addInfo(highlight, "Highlight the currently playing text chunk in the editor.");
+		highlight.addToggle((toggle) => toggle.setValue(this.voiceover.settings.highlightSpokenText).onChange(async (value) => {
+			this.voiceover.settings.highlightSpokenText = value;
+			this.voiceover.clearHighlight();
+			await this.voiceover.saveSettings();
+		}));
 	}
 }

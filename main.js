@@ -372,6 +372,14 @@ function normalizeSpeechSettings(settings) {
 
 // src/settingsTab.ts
 var import_obsidian3 = require("obsidian");
+function addInfo(setting, explanation) {
+  const button = setting.nameEl.createEl("button", {
+    cls: "local-voiceover-setting-info",
+    attr: { type: "button", "aria-label": explanation }
+  });
+  button.setText("I");
+  button.createSpan({ cls: "local-voiceover-setting-tooltip", text: explanation });
+}
 var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
@@ -380,7 +388,9 @@ var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    new import_obsidian3.Setting(containerEl).setName("Speed").setDesc("Speech speed. Lower is slower.").addSlider((slider) => {
+    const speed = new import_obsidian3.Setting(containerEl).setName("Speed");
+    addInfo(speed, "Speech speed. Lower is slower. Choose a value from 0.5 to 2.0.");
+    speed.addSlider((slider) => {
       const input = slider.sliderEl.parentElement.createEl("input", {
         cls: "local-voiceover-slider-value",
         type: "number",
@@ -405,7 +415,9 @@ var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
         await this.voiceover.saveSettings();
       });
     });
-    new import_obsidian3.Setting(containerEl).setName("Variation").setDesc("Voice variation. Lower is steadier.").addSlider((slider) => {
+    const variation = new import_obsidian3.Setting(containerEl).setName("Variation");
+    addInfo(variation, "Voice variation. Lower is steadier. Choose a value from 0 to 1.");
+    variation.addSlider((slider) => {
       const input = slider.sliderEl.parentElement.createEl("input", {
         cls: "local-voiceover-slider-value",
         type: "number",
@@ -430,23 +442,23 @@ var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
         await this.voiceover.saveSettings();
       });
     });
-    new import_obsidian3.Setting(containerEl).setName("Seed").setDesc("A safe integer. The same seed repeats the same sample on this runtime.").addText(
-      (text) => text.setValue(String(this.voiceover.settings.seed)).onChange(async (value) => {
-        const seed = Number(value);
-        if (!Number.isSafeInteger(seed))
-          return;
-        this.voiceover.settings.seed = seed;
-        normalizeSpeechSettings(this.voiceover.settings);
-        await this.voiceover.saveSettings();
-      })
-    );
-    new import_obsidian3.Setting(containerEl).setName("Highlight spoken text").setDesc("Highlight the currently playing text chunk in the editor.").addToggle(
-      (toggle) => toggle.setValue(this.voiceover.settings.highlightSpokenText).onChange(async (value) => {
-        this.voiceover.settings.highlightSpokenText = value;
-        this.voiceover.clearHighlight();
-        await this.voiceover.saveSettings();
-      })
-    );
+    const seed = new import_obsidian3.Setting(containerEl).setName("Seed");
+    addInfo(seed, "A safe integer. The same seed repeats the same sample on this runtime.");
+    seed.addText((text) => text.setValue(String(this.voiceover.settings.seed)).onChange(async (value) => {
+      const parsed = Number(value);
+      if (!Number.isSafeInteger(parsed))
+        return;
+      this.voiceover.settings.seed = parsed;
+      normalizeSpeechSettings(this.voiceover.settings);
+      await this.voiceover.saveSettings();
+    }));
+    const highlight = new import_obsidian3.Setting(containerEl).setName("Highlight spoken text");
+    addInfo(highlight, "Highlight the currently playing text chunk in the editor.");
+    highlight.addToggle((toggle) => toggle.setValue(this.voiceover.settings.highlightSpokenText).onChange(async (value) => {
+      this.voiceover.settings.highlightSpokenText = value;
+      this.voiceover.clearHighlight();
+      await this.voiceover.saveSettings();
+    }));
   }
 };
 

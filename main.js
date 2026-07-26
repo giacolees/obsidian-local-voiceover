@@ -199,11 +199,20 @@ function createSelectionToolbarExtension(actions) {
         this.selectedText = "";
         this.selectedFrom = 0;
         this.highlightOffset = 0;
+        this.destroyed = false;
+        this.clearPending = false;
         this.refresh = () => this.scheduleRender();
         this.highlightChunk = (event) => this.applyChunkHighlight(event);
         this.clearHighlight = () => {
           this.highlightOffset = 0;
-          this.view.dispatch({ effects: setPlaybackHighlight.of(null) });
+          if (this.clearPending)
+            return;
+          this.clearPending = true;
+          window.setTimeout(() => {
+            this.clearPending = false;
+            if (!this.destroyed)
+              this.view.dispatch({ effects: setPlaybackHighlight.of(null) });
+          }, 0);
         };
         this.toolbar = this.view.dom.ownerDocument.body.createDiv({ cls: "local-voiceover-selection-toolbar" });
         this.playButton = this.toolbar.createEl("button", {
@@ -231,6 +240,7 @@ function createSelectionToolbarExtension(actions) {
           this.scheduleRender();
       }
       destroy() {
+        this.destroyed = true;
         window.removeEventListener("local-voiceover-state", this.refresh);
         window.removeEventListener("local-voiceover-highlight", this.highlightChunk);
         window.removeEventListener("local-voiceover-highlight-clear", this.clearHighlight);

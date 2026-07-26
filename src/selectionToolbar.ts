@@ -42,11 +42,18 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 			private selectedText = "";
 			private selectedFrom = 0;
 			private highlightOffset = 0;
+			private destroyed = false;
+			private clearPending = false;
 			private readonly refresh = () => this.scheduleRender();
 			private readonly highlightChunk = (event: Event) => this.applyChunkHighlight(event);
 			private readonly clearHighlight = () => {
 				this.highlightOffset = 0;
-				this.view.dispatch({ effects: setPlaybackHighlight.of(null) });
+				if (this.clearPending) return;
+				this.clearPending = true;
+				window.setTimeout(() => {
+					this.clearPending = false;
+					if (!this.destroyed) this.view.dispatch({ effects: setPlaybackHighlight.of(null) });
+				}, 0);
 			};
 
 			constructor(private readonly view: EditorView) {
@@ -76,6 +83,7 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 			}
 
 			destroy(): void {
+				this.destroyed = true;
 				window.removeEventListener("local-voiceover-state", this.refresh);
 				window.removeEventListener("local-voiceover-highlight", this.highlightChunk);
 				window.removeEventListener("local-voiceover-highlight-clear", this.clearHighlight);

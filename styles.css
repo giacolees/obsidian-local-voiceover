@@ -47,6 +47,36 @@
 	outline: none;
 }
 
+.local-voiceover-markdown-rules {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	margin: -8px 0 12px;
+	overflow: hidden;
+}
+
+.local-voiceover-markdown-rule {
+	align-items: center;
+	border-top: 1px solid var(--background-modifier-border);
+	display: grid;
+	gap: 10px;
+	grid-template-columns: minmax(120px, 1fr) minmax(100px, 1fr) 52px;
+	padding: 8px 12px;
+}
+
+.local-voiceover-markdown-rule:first-child { border-top: 0; }
+
+.local-voiceover-markdown-rule-header {
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	text-transform: uppercase;
+}
+
+.local-voiceover-markdown-rule code { color: var(--text-accent); }
+.local-voiceover-markdown-spoken { color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.local-voiceover-markdown-rule .checkbox-container { justify-self: end; }
+
 .local-voiceover-selection-toolbar__status {
 	border-left: 1px solid var(--background-modifier-border);
 	color: var(--text-muted);

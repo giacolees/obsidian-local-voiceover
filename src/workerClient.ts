@@ -7,6 +7,15 @@ export interface SpeechControls {
 	speed: number;
 	variation: number;
 	seed: number;
+	markdownNormalization: "default" | "none" | "custom";
+	markdownRules: {
+		headings: boolean;
+		emphasis: boolean;
+		links: boolean;
+		listsAndQuotes: boolean;
+		code: boolean;
+		strikethroughAndRules: boolean;
+	};
 }
 
 type PendingRun = {

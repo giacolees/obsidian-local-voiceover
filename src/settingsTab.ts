@@ -1,4 +1,4 @@
-import { type App, type Plugin, PluginSettingTab, Setting } from "obsidian";
+import { type App, type Plugin, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
 import { normalizeSpeechSettings, type LocalVoiceoverSettings } from "./settings";
 
 type SettingsPlugin = {
@@ -13,6 +13,32 @@ function addInfo(setting: Setting, explanation: string): void {
 		attr: { type: "button", "aria-label": explanation },
 	});
 	button.setText("I");
+}
+
+function createMarkdownRules(container: HTMLElement, voiceover: SettingsPlugin): HTMLElement {
+	const table = container.createDiv({ cls: "local-voiceover-markdown-rules" });
+	const header = table.createDiv({ cls: "local-voiceover-markdown-rule local-voiceover-markdown-rule-header" });
+	header.createSpan({ text: "Markdown syntax" });
+	header.createSpan({ text: "Spoken as" });
+	header.createSpan({ text: "Apply" });
+	const rules: [keyof LocalVoiceoverSettings["markdownRules"], string, string][] = [
+		["headings", "# Introduction", "Introduction"],
+		["emphasis", "**Play** / *Play*", "Play"],
+		["links", "[Obsidian](url)", "Obsidian"],
+		["listsAndQuotes", "- Item / > Quote", "Item / Quote"],
+		["code", "`code` / ``` block", "code / block content"],
+		["strikethroughAndRules", "~~Removed~~ / ---", "Removed / omitted"],
+	];
+	for (const [key, syntax, spoken] of rules) {
+		const row = table.createDiv({ cls: "local-voiceover-markdown-rule" });
+		row.createEl("code", { text: syntax });
+		row.createSpan({ cls: "local-voiceover-markdown-spoken", text: spoken });
+		new ToggleComponent(row).setValue(voiceover.settings.markdownRules[key]).onChange(async (value) => {
+			voiceover.settings.markdownRules[key] = value;
+			await voiceover.saveSettings();
+		});
+	}
+	return table;
 }
 
 export class LocalVoiceoverSettingTab extends PluginSettingTab {
@@ -75,6 +101,20 @@ export class LocalVoiceoverSettingTab extends PluginSettingTab {
 				await this.voiceover.saveSettings();
 			});
 		});
+
+		const markdown = new Setting(containerEl).setName("Markdown normalization");
+		addInfo(markdown, "Choose how selected Markdown is prepared before speech.");
+		const markdownRules = createMarkdownRules(containerEl, this.voiceover);
+		const updateMarkdownRules = () => markdownRules.toggle(this.voiceover.settings.markdownNormalization === "custom");
+		markdown.addDropdown((dropdown) => dropdown
+			.addOptions({ default: "Default", none: "None", custom: "Custom" })
+			.setValue(this.voiceover.settings.markdownNormalization)
+			.onChange(async (value) => {
+				this.voiceover.settings.markdownNormalization = value as LocalVoiceoverSettings["markdownNormalization"];
+				updateMarkdownRules();
+				await this.voiceover.saveSettings();
+			}));
+		updateMarkdownRules();
 
 		const seed = new Setting(containerEl).setName("Seed");
 		addInfo(seed, "A safe integer. The same seed repeats the same sample on this runtime.");

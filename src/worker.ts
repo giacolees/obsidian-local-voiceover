@@ -12,6 +12,15 @@ type SynthesizeMessage = {
 	speed: number;
 	variation: number;
 	seed: number;
+	markdownNormalization: "default" | "none" | "custom";
+	markdownRules: {
+		headings: boolean;
+		emphasis: boolean;
+		links: boolean;
+		listsAndQuotes: boolean;
+		code: boolean;
+		strikethroughAndRules: boolean;
+	};
 };
 type AbortMessage = { type: "abort"; id: number };
 
@@ -50,6 +59,8 @@ async function handleMessage(message: InitMessage | SynthesizeMessage | AbortMes
 			speed: message.speed,
 			variation: message.variation,
 			seed: message.seed,
+			markdownNormalization: message.markdownNormalization,
+			markdownRules: message.markdownRules,
 			signal: controller.signal,
 			onChunk: async (chunk: { waveform: Float32Array; source: string }) => {
 				post(

@@ -127,26 +127,20 @@ const digitWords = (text) =>
 		.map((char) => words(Number(char)))
 		.join(" ");
 
-export function stripMarkdown(input) {
-	return input
-		.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-		.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-		.replace(/<https?:\/\/[^>]+>/g, "")
-		.replace(/^\s*```[^\n]*\n?/gm, "")
-		.replace(/^\s*```\s*$/gm, "")
-		.replace(/`([^`]*)`/g, "$1")
-		.replace(/^\s{0,3}#{1,6}\s+(.+?)(?:\s+#+)?\s*$/gm, "$1")
-		.replace(/^\s{0,3}>\s?/gm, "")
-		.replace(/^\s{0,3}(?:[-+*]|\d+[.)])\s+/gm, "")
-		.replace(/^\s{0,3}(?:[-*_]\s*){3,}$/gm, "")
-		.replace(/^\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?$/gm, "")
-		.replace(/\*\*([^*]+)\*\*/g, "$1")
-		.replace(/__([^_]+)__/g, "$1")
-		.replace(/~~([^~]+)~~/g, "$1")
-		.replace(/(?<!\w)\*([^*]+)\*(?!\w)/g, "$1")
-		.replace(/(?<!\w)_([^_]+)_(?!\w)/g, "$1")
-		.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1")
-		.replace(/\|/g, " ");
+export function stripMarkdown(input, rules) {
+	let text = input;
+	if (rules.links)
+		text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/<https?:\/\/[^>]+>/g, "");
+	if (rules.code)
+		text = text.replace(/^\s*```[^\n]*\n?/gm, "").replace(/^\s*```\s*$/gm, "").replace(/`([^`]*)`/g, "$1");
+	if (rules.headings) text = text.replace(/^\s{0,3}#{1,6}\s+(.+?)(?:\s+#+)?\s*$/gm, "$1");
+	if (rules.listsAndQuotes)
+		text = text.replace(/^\s{0,3}>\s?/gm, "").replace(/^\s{0,3}(?:[-+*]|\d+[.)])\s+/gm, "").replace(/^\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?$/gm, "").replace(/\|/g, " ");
+	if (rules.emphasis)
+		text = text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1").replace(/(?<!\w)\*([^*]+)\*(?!\w)/g, "$1").replace(/(?<!\w)_([^_]+)_(?!\w)/g, "$1");
+	if (rules.strikethroughAndRules)
+		text = text.replace(/~~([^~]+)~~/g, "$1").replace(/^\s{0,3}(?:[-*_]\s*){3,}$/gm, "");
+	return text.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1");
 }
 
 export function normalizeText(input) {
@@ -309,8 +303,10 @@ export async function createInflectFrontend() {
 		const interspersedIds = [0, ...ids.flatMap((id) => [id, 0])];
 		return { normalizedText, phonemeText, ids: interspersedIds };
 	};
-	const phonemizeChunks = (text) => {
-		const pending = splitText(stripMarkdown(text));
+	const phonemizeChunks = (text, markdownNormalization = "default", markdownRules) => {
+		const defaultRules = { headings: true, emphasis: true, links: true, listsAndQuotes: true, code: true, strikethroughAndRules: true };
+		const rules = markdownNormalization === "custom" ? { ...defaultRules, ...markdownRules } : defaultRules;
+		const pending = splitText(markdownNormalization === "none" ? text : stripMarkdown(text, rules));
 		const outputs = [];
 		while (pending.length) {
 			const source = pending.shift();

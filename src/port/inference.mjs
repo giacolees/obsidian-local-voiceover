@@ -56,8 +56,8 @@ export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" 
 
 		return {
 			frontend,
-			async synthesize(text, { speed = 1, variation = 0.667, seed = 0, onChunk, signal } = {}) {
-				const outputs = frontend.phonemizeChunks(text);
+			async synthesize(text, { speed = 1, variation = 0.667, seed = 0, markdownNormalization = "default", markdownRules, onChunk, signal } = {}) {
+				const outputs = frontend.phonemizeChunks(text, markdownNormalization, markdownRules);
 				const sourceChunks = outputs.map((output) => output.source);
 				const pieces = [];
 				for (let index = 0; index < outputs.length; index += 1) {

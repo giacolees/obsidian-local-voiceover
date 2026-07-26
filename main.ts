@@ -91,6 +91,8 @@ export default class LocalVoiceoverPlugin extends Plugin {
 					speed: this.settings.speed,
 					variation: this.settings.variation,
 					seed: this.settings.seed,
+					markdownNormalization: this.settings.markdownNormalization,
+					markdownRules: this.settings.markdownRules,
 				},
 				(chunk) => {
 					if (!abort.signal.aborted) {

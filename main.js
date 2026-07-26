@@ -333,13 +333,36 @@ function createSelectionToolbarExtension(actions) {
         const source = event.detail?.source;
         if (!source)
           return;
-        const offset = this.playbackText.indexOf(source, this.highlightOffset);
-        if (offset < 0)
+        const range = this.findSourceRange(source);
+        if (!range)
           return;
-        this.highlightOffset = offset + source.length;
+        this.highlightOffset = range.to;
         this.view.dispatch({
-          effects: setPlaybackHighlight.of({ from: this.playbackFrom + offset, to: this.playbackFrom + offset + source.length })
+          effects: setPlaybackHighlight.of({ from: this.playbackFrom + range.from, to: this.playbackFrom + range.to })
         });
+      }
+      findSourceRange(source) {
+        const direct = this.playbackText.indexOf(source, this.highlightOffset);
+        if (direct >= 0)
+          return { from: direct, to: direct + source.length };
+        const words = source.match(/[\p{L}\p{N}]+/gu);
+        if (!words?.length)
+          return null;
+        const tokens = /[\p{L}\p{N}]+/gu;
+        tokens.lastIndex = this.highlightOffset;
+        let from = -1;
+        let to = -1;
+        for (const word of words) {
+          let token = tokens.exec(this.playbackText);
+          while (token && token[0].toLocaleLowerCase() !== word.toLocaleLowerCase())
+            token = tokens.exec(this.playbackText);
+          if (!token)
+            return null;
+          if (from < 0)
+            from = token.index;
+          to = token.index + token[0].length;
+        }
+        return { from, to };
       }
       applyPosition(coords, state) {
         if (!coords) {

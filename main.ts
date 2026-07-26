@@ -2,11 +2,14 @@ import { Editor, Notice, Plugin, normalizePath } from "obsidian";
 import { ModelCache } from "./src/modelCache";
 import { StreamPlayer } from "./src/player";
 import { boundaryPauseSeconds, edgeFade } from "./src/port/runtime.mjs";
-import { createSelectionToolbarExtension, type VoiceoverState } from "./src/selectionToolbar";
+import { createSelectionToolbarExtension, playbackHighlightExtension, type VoiceoverState } from "./src/selectionToolbar";
+import { DEFAULT_SETTINGS, type LocalVoiceoverSettings } from "./src/settings";
+import { LocalVoiceoverSettingTab } from "./src/settingsTab";
 import workerSource from "./src/generatedWorker";
 import { SpeechWorkerClient } from "./src/workerClient";
 
 export default class LocalVoiceoverPlugin extends Plugin {
+	settings: LocalVoiceoverSettings = DEFAULT_SETTINGS;
 	private readonly player = new StreamPlayer();
 	private abortController: AbortController | null = null;
 	private worker: SpeechWorkerClient | null = null;
@@ -14,14 +17,18 @@ export default class LocalVoiceoverPlugin extends Plugin {
 	private state: VoiceoverState = "idle";
 
 	async onload(): Promise<void> {
+		await this.loadSettings();
 		this.player.setOnStateChange(() => this.syncPlaybackState());
-		this.registerEditorExtension(
+		this.addSettingTab(new LocalVoiceoverSettingTab(this.app, this));
+		this.registerEditorExtension([
+			playbackHighlightExtension,
 			createSelectionToolbarExtension({
 				getState: () => this.state,
+				isHighlightEnabled: () => this.settings.highlightSpokenText,
 				speak: (text) => void this.speak(text),
 				stop: () => this.stop(),
 			}),
-		);
+		]);
 		this.addCommand({
 			id: "speak-selected-text",
 			name: "Speak selected text",
@@ -39,6 +46,19 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		this.register(() => this.disposeRuntime());
 	}
 
+	async loadSettings(): Promise<void> {
+		const saved = (await this.loadData()) as Partial<LocalVoiceoverSettings> | null;
+		this.settings = { ...DEFAULT_SETTINGS, ...saved };
+	}
+
+	async saveSettings(): Promise<void> {
+		await this.saveData(this.settings);
+	}
+
+	clearHighlight(): void {
+		window.dispatchEvent(new Event("local-voiceover-highlight-clear"));
+	}
+
 	private speakCommand(checking: boolean, editor: Editor): boolean {
 		const text = editor.getSelection().trim();
 		if (!text || this.isBusy()) return false;
@@ -50,6 +70,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		if (!text || this.isBusy()) return;
 		const abort = new AbortController();
 		this.abortController = abort;
+		this.clearHighlight();
 		this.setState("loading");
 		try {
 			await this.player.start();
@@ -62,7 +83,14 @@ export default class LocalVoiceoverPlugin extends Plugin {
 				(chunk) => {
 					if (!abort.signal.aborted) {
 						this.setState("speaking");
-						this.player.queue(edgeFade(chunk.waveform) as Float32Array, Number(boundaryPauseSeconds(chunk.source)));
+						this.player.queue(
+							edgeFade(chunk.waveform) as Float32Array,
+							Number(boundaryPauseSeconds(chunk.source)),
+							() => {
+								if (this.settings.highlightSpokenText)
+									window.dispatchEvent(new CustomEvent("local-voiceover-highlight", { detail: { source: chunk.source } }));
+							},
+						);
 					}
 				},
 				abort.signal,
@@ -115,12 +143,16 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		this.abortController?.abort();
 		this.abortController = null;
 		this.player.stop();
+		this.clearHighlight();
 		this.setState("idle");
 		new Notice("Speech stopped.");
 	}
 
 	private syncPlaybackState(): void {
-		if (!this.abortController && !this.player.isPlaying) this.setState("idle");
+		if (!this.abortController && !this.player.isPlaying) {
+			this.clearHighlight();
+			this.setState("idle");
+		}
 	}
 
 	private setState(state: VoiceoverState): void {
@@ -133,6 +165,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		this.abortController?.abort();
 		this.abortController = null;
 		this.player.stop();
+		this.clearHighlight();
 		this.worker?.dispose();
 		this.worker = null;
 	}

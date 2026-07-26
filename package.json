@@ -16,7 +16,7 @@
   },
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@codemirror/state": "^6.5.0",
+    "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.38.6",
     "ephone": "1.0.2",
     "onnxruntime-web": "1.23.2"

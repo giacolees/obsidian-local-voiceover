@@ -2,6 +2,7 @@ export class StreamPlayer {
 	private context: AudioContext | null = null;
 	private readonly sources = new Set<AudioBufferSourceNode>();
 	private nextStart = 0;
+	private readonly startTimers = new Set<number>();
 	private onStateChange: () => void = () => undefined;
 
 	setOnStateChange(onStateChange: () => void): void {
@@ -19,7 +20,7 @@ export class StreamPlayer {
 		this.nextStart = this.context.currentTime + 0.05;
 	}
 
-	queue(samples: Float32Array, pauseSeconds: number): void {
+	queue(samples: Float32Array, pauseSeconds: number, onStart?: () => void): void {
 		if (!this.context) throw new Error("Audio playback has not started.");
 		const buffer = this.context.createBuffer(1, samples.length, 24000);
 		buffer.copyToChannel(new Float32Array(samples), 0);
@@ -32,6 +33,13 @@ export class StreamPlayer {
 		});
 		const startAt = Math.max(this.nextStart, this.context.currentTime + 0.05);
 		source.start(startAt);
+		if (onStart) {
+			const timer = window.setTimeout(() => {
+				this.startTimers.delete(timer);
+				onStart();
+			}, Math.max(0, (startAt - this.context.currentTime) * 1000));
+			this.startTimers.add(timer);
+		}
 		this.nextStart = startAt + buffer.duration + pauseSeconds;
 		this.sources.add(source);
 		this.onStateChange();
@@ -40,6 +48,8 @@ export class StreamPlayer {
 	stop(): void {
 		for (const source of this.sources) source.stop();
 		this.sources.clear();
+		for (const timer of this.startTimers) window.clearTimeout(timer);
+		this.startTimers.clear();
 		void this.context?.close();
 		this.context = null;
 		this.onStateChange();

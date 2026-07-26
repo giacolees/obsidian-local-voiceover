@@ -47,6 +47,14 @@ Inflect Micro v2 provides one fixed English male voice. It is not voice cloning,
 
 The selection controls display **Ready**, **Loading**, **Generating**, or **Speaking** so you can see the current state.
 
+### Speech controls
+
+In **Settings → Local Voiceover**, configure:
+
+- **Speed** (`0.5`–`2.0`, default `1.0`): lower is slower.
+- **Variation** (`0`–`1`, default `0.667`): lower is steadier.
+- **Seed** (safe integer, default `0`): the same seed repeats the stochastic sample on the same runtime; long passages use `seed + chunkIndex`.
+
 ---
 
 ## Installation

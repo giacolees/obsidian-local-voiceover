@@ -3,6 +3,12 @@ export interface SpeechChunk {
 	source: string;
 }
 
+export interface SpeechControls {
+	speed: number;
+	variation: number;
+	seed: number;
+}
+
 type PendingRun = {
 	onChunk: (chunk: SpeechChunk) => void;
 	resolve: () => void;
@@ -43,12 +49,12 @@ export class SpeechWorkerClient {
 		return this.ready;
 	}
 
-	synthesize(text: string, onChunk: (chunk: SpeechChunk) => void, signal: AbortSignal): Promise<void> {
+	synthesize(text: string, controls: SpeechControls, onChunk: (chunk: SpeechChunk) => void, signal: AbortSignal): Promise<void> {
 		const id = this.nextId++;
 		return new Promise<void>((resolve, reject) => {
 			this.pending.set(id, { onChunk, resolve, reject });
 			signal.addEventListener("abort", () => this.worker.postMessage({ type: "abort", id }), { once: true });
-			this.worker.postMessage({ type: "synthesize", id, text });
+			this.worker.postMessage({ type: "synthesize", id, text, ...controls });
 		});
 	}
 

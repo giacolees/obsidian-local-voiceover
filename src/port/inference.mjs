@@ -1,16 +1,15 @@
 import * as ort from "onnxruntime-web";
-import { createInflectFrontend } from "./frontend.mjs";
+import { createInflectFrontend, MAX_TOKENS } from "./frontend.mjs";
 import { seededNormalNoise } from "./runtime.mjs";
 
 export const SAMPLE_RATE = 24000;
 
 /**
- * Loads the official Inflect v2 ONNX duration and decode graphs. The returned
- * synthesize function exposes each completed inference chunk for streamed UI playback.
+ * Runs the official Inflect Micro v2 FP32 ONNX export in a browser worker.
+ * Both graphs use one execution provider so WebGPU initialization can fall
+ * back atomically to WASM.
  */
 export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" }) {
-	// Electron exposes Node's process in its renderer. Hide it while ORT chooses
-	// a browser execution provider so its JSEP WebGPU/WASM runtime is selected.
 	const nodeProcess = globalThis.process;
 	try {
 		globalThis.process = undefined;
@@ -46,39 +45,37 @@ export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" 
 		}
 		if (!duration || !decode) [duration, decode] = await createSessions("wasm");
 
-		const synthesizeChunk = async (output, seed) => {
-			const tokens = new BigInt64Array(output.ids.map(BigInt));
+		const synthesizeChunk = async (output, seed, speed, variation) => {
+			if (output.ids.length > MAX_TOKENS)
+				throw new Error(`Token limit exceeded: ${output.ids.length}`);
+			const tokens = BigInt64Array.from(output.ids, BigInt);
 			const durationOutput = await duration.run({
 				tokens: new ort.Tensor("int64", tokens, [1, tokens.length]),
 				lengths: new ort.Tensor("int64", BigInt64Array.of(BigInt(tokens.length)), [1]),
-				length_scale: new ort.Tensor("float32", Float32Array.of(1), [1]),
+				length_scale: new ort.Tensor("float32", Float32Array.of(1 / speed), []),
 			});
-			const distribution = durationOutput.m_p_exp;
+			const mPExp = durationOutput.m_p_exp;
 			const waveform = (await decode.run({
-				m_p_exp: distribution,
+				m_p_exp: mPExp,
 				logs_p_exp: durationOutput.logs_p_exp,
 				y_mask: durationOutput.y_mask,
-				zp_noise: new ort.Tensor(
-					"float32",
-					seededNormalNoise(seed, distribution.data.length, 1),
-					distribution.dims,
-				),
-				noise_scale: new ort.Tensor("float32", Float32Array.of(0.667), [1]),
+				zp_noise: new ort.Tensor("float32", seededNormalNoise(seed, 1, mPExp.data.length), mPExp.dims),
+				noise_scale: new ort.Tensor("float32", Float32Array.of(variation), []),
 			})).waveform.data;
-			return { waveform: waveform.slice() };
+			return { waveform };
 		};
 
 		return {
 			backend,
 			fallbackReason,
 			frontend,
-			async synthesize(text, { onChunk, signal } = {}) {
+			async synthesize(text, { speed = 1, variation = 0.667, seed = 0, onChunk, signal } = {}) {
 				const outputs = frontend.phonemizeChunks(text);
 				const sourceChunks = outputs.map((output) => output.source);
 				const pieces = [];
 				for (let index = 0; index < outputs.length; index += 1) {
 					if (signal?.aborted) throw new DOMException("Synthesis aborted.", "AbortError");
-					const piece = await synthesizeChunk(outputs[index], index);
+					const piece = await synthesizeChunk(outputs[index], seed + index, speed, variation);
 					pieces.push(piece);
 					await onChunk?.({ ...piece, index, total: outputs.length, source: sourceChunks[index] });
 				}

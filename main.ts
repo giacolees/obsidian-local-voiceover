@@ -3,7 +3,7 @@ import { ModelCache } from "./src/modelCache";
 import { StreamPlayer } from "./src/player";
 import { boundaryPauseSeconds, edgeFade } from "./src/port/runtime.mjs";
 import { createSelectionToolbarExtension, playbackHighlightExtension, type VoiceoverState } from "./src/selectionToolbar";
-import { DEFAULT_SETTINGS, type LocalVoiceoverSettings } from "./src/settings";
+import { DEFAULT_SETTINGS, normalizeSpeechSettings, type LocalVoiceoverSettings } from "./src/settings";
 import { LocalVoiceoverSettingTab } from "./src/settingsTab";
 import workerSource from "./src/generatedWorker";
 import { SpeechWorkerClient } from "./src/workerClient";
@@ -50,6 +50,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 	async loadSettings(): Promise<void> {
 		const saved = (await this.loadData()) as Partial<LocalVoiceoverSettings> | null;
 		this.settings = { ...DEFAULT_SETTINGS, ...saved };
+		normalizeSpeechSettings(this.settings);
 	}
 
 	async saveSettings(): Promise<void> {
@@ -87,6 +88,11 @@ export default class LocalVoiceoverPlugin extends Plugin {
 			new Notice("Generating local speech…");
 			await worker.synthesize(
 				text,
+				{
+					speed: this.settings.speed,
+					variation: this.settings.variation,
+					seed: this.settings.seed,
+				},
 				(chunk) => {
 					if (!abort.signal.aborted) {
 						this.setState("speaking");

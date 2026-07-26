@@ -5,7 +5,14 @@ type InitMessage = {
 	models: Record<"duration.onnx" | "decode.onnx", ArrayBuffer>;
 	wasmPaths: { mjs: string; wasm: string };
 };
-type SynthesizeMessage = { type: "synthesize"; id: number; text: string };
+type SynthesizeMessage = {
+	type: "synthesize";
+	id: number;
+	text: string;
+	speed: number;
+	variation: number;
+	seed: number;
+};
 type AbortMessage = { type: "abort"; id: number };
 
 let inference: Awaited<ReturnType<typeof createInflectInference>> | null = null;
@@ -40,6 +47,9 @@ async function handleMessage(message: InitMessage | SynthesizeMessage | AbortMes
 	controllers.set(message.id, controller);
 	try {
 		await (inference.synthesize as (text: string, options: Record<string, unknown>) => Promise<unknown>)(message.text, {
+			speed: message.speed,
+			variation: message.variation,
+			seed: message.seed,
 			signal: controller.signal,
 			onChunk: async (chunk: { waveform: Float32Array; source: string }) => {
 				post(

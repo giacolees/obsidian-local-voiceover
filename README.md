@@ -4,6 +4,10 @@
 
 Local Voiceover turns the selected text in an Obsidian note into speech directly on your desktop. It runs [Inflect Micro v2](https://huggingface.co/owensong/Inflect-Micro-v2) locally through ONNX Runtime Web, preferring WebGPU with a WebAssembly fallback: no API key, account, Python installation, or uploaded note content.
 
+## Other projects
+
+- [Obsidian Math Convert](https://github.com/giacolees/obsidian-math-convert) — convert math formula images to LaTeX locally with FormulaNet, Transformers.js, and ONNX; no API key required.
+
 > **Built for focused reading.** Inflect Micro v2 is a compact 9.36 M-parameter English text-to-waveform model. Local Voiceover keeps its phonemizer and ONNX graphs in a worker, so long passages can synthesize without freezing the editor. The first run downloads roughly 38 MB of model graphs plus its runtime assets; later playback works from the local cache, including offline.
 
 ## Demo
@@ -102,12 +106,6 @@ npm run check    # build, lint, markdown, unused-code, cycle, and duplicate chec
 2. Push the commit and tag to GitHub.
 3. The release workflow runs all quality checks and attaches the Community Plugin-compatible `main.js`, `manifest.json`, and `styles.css` files.
 4. Submit the repository to the Obsidian community plugin list, or update the existing listing.
-
----
-
-## Other projects
-
-- [Obsidian Math Convert](https://github.com/giacolees/obsidian-math-convert) — convert math formula images to LaTeX locally with FormulaNet, Transformers.js, and ONNX; no API key required.
 
 ---
 

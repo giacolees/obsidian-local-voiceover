@@ -47,35 +47,6 @@
 	outline: none;
 }
 
-.local-voiceover-setting-tooltip {
-	background: var(--background-primary);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	box-shadow: var(--shadow-s);
-	color: var(--text-normal);
-	font-family: var(--font-interface);
-	font-size: var(--font-ui-smaller);
-	font-weight: var(--font-normal);
-	left: 18px;
-	line-height: var(--line-height-normal);
-	opacity: 0;
-	padding: 8px 10px;
-	pointer-events: none;
-	position: absolute;
-	text-align: left;
-	top: -8px;
-	transition: opacity 100ms ease-in-out, visibility 100ms ease-in-out;
-	visibility: hidden;
-	width: 240px;
-	z-index: var(--layer-popover);
-}
-
-.local-voiceover-setting-info:hover .local-voiceover-setting-tooltip,
-.local-voiceover-setting-info:focus-visible .local-voiceover-setting-tooltip {
-	opacity: 1;
-	visibility: visible;
-}
-
 .local-voiceover-selection-toolbar__status {
 	border-left: 1px solid var(--background-modifier-border);
 	color: var(--text-muted);

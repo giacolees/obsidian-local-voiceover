@@ -372,16 +372,12 @@ function normalizeSpeechSettings(settings) {
 
 // src/settingsTab.ts
 var import_obsidian3 = require("obsidian");
-var tooltipId = 0;
 function addInfo(setting, explanation) {
-  tooltipId += 1;
-  const id = `local-voiceover-setting-tooltip-${tooltipId}`;
   const button = setting.nameEl.createEl("button", {
     cls: "local-voiceover-setting-info",
-    attr: { type: "button", "aria-describedby": id }
+    attr: { type: "button", "aria-label": explanation }
   });
   button.setText("I");
-  button.createSpan({ cls: "local-voiceover-setting-tooltip", text: explanation, attr: { id } });
 }
 var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
   constructor(app, plugin) {

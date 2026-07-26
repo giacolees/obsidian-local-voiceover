@@ -21,27 +21,37 @@ export class LocalVoiceoverSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Speed")
 			.setDesc("Speech speed. Lower is slower.")
-			.addSlider((slider) =>
-				slider
+			.addSlider((slider) => {
+				const output = (slider.sliderEl.parentElement as HTMLElement).createEl("output", {
+					cls: "local-voiceover-slider-value",
+					value: this.voiceover.settings.speed.toFixed(2),
+				});
+				return slider
 					.setLimits(0.5, 2, 0.05)
 					.setValue(this.voiceover.settings.speed)
 					.onChange(async (value) => {
+						output.value = value.toFixed(2);
 						this.voiceover.settings.speed = value;
 						await this.voiceover.saveSettings();
-					}),
-			);
+					});
+			});
 		new Setting(containerEl)
 			.setName("Variation")
 			.setDesc("Voice variation. Lower is steadier.")
-			.addSlider((slider) =>
-				slider
+			.addSlider((slider) => {
+				const output = (slider.sliderEl.parentElement as HTMLElement).createEl("output", {
+					cls: "local-voiceover-slider-value",
+					value: this.voiceover.settings.variation.toFixed(2),
+				});
+				return slider
 					.setLimits(0, 1, 0.01)
 					.setValue(this.voiceover.settings.variation)
 					.onChange(async (value) => {
+						output.value = value.toFixed(2);
 						this.voiceover.settings.variation = value;
 						await this.voiceover.saveSettings();
-					}),
-			);
+					});
+			});
 		new Setting(containerEl)
 			.setName("Seed")
 			.setDesc("A safe integer. The same seed repeats the same sample on this runtime.")

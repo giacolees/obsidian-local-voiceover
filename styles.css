@@ -14,6 +14,14 @@
 
 .local-voiceover-selection-toolbar__button { height: 28px; width: 28px; }
 
+.local-voiceover-slider-value {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	margin-left: 8px;
+	min-width: 3.5em;
+	text-align: right;
+}
+
 .local-voiceover-selection-toolbar__status {
 	border-left: 1px solid var(--background-modifier-border);
 	color: var(--text-muted);

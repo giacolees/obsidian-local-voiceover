@@ -382,18 +382,28 @@ var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    new import_obsidian3.Setting(containerEl).setName("Speed").setDesc("Speech speed. Lower is slower.").addSlider(
-      (slider) => slider.setLimits(0.5, 2, 0.05).setValue(this.voiceover.settings.speed).onChange(async (value) => {
+    new import_obsidian3.Setting(containerEl).setName("Speed").setDesc("Speech speed. Lower is slower.").addSlider((slider) => {
+      const output = slider.sliderEl.parentElement.createEl("output", {
+        cls: "local-voiceover-slider-value",
+        value: this.voiceover.settings.speed.toFixed(2)
+      });
+      return slider.setLimits(0.5, 2, 0.05).setValue(this.voiceover.settings.speed).onChange(async (value) => {
+        output.value = value.toFixed(2);
         this.voiceover.settings.speed = value;
         await this.voiceover.saveSettings();
-      })
-    );
-    new import_obsidian3.Setting(containerEl).setName("Variation").setDesc("Voice variation. Lower is steadier.").addSlider(
-      (slider) => slider.setLimits(0, 1, 0.01).setValue(this.voiceover.settings.variation).onChange(async (value) => {
+      });
+    });
+    new import_obsidian3.Setting(containerEl).setName("Variation").setDesc("Voice variation. Lower is steadier.").addSlider((slider) => {
+      const output = slider.sliderEl.parentElement.createEl("output", {
+        cls: "local-voiceover-slider-value",
+        value: this.voiceover.settings.variation.toFixed(2)
+      });
+      return slider.setLimits(0, 1, 0.01).setValue(this.voiceover.settings.variation).onChange(async (value) => {
+        output.value = value.toFixed(2);
         this.voiceover.settings.variation = value;
         await this.voiceover.saveSettings();
-      })
-    );
+      });
+    });
     new import_obsidian3.Setting(containerEl).setName("Seed").setDesc("A safe integer. The same seed repeats the same sample on this runtime.").addText(
       (text) => text.setValue(String(this.voiceover.settings.seed)).onChange(async (value) => {
         const seed = Number(value);
@@ -424,6 +434,7 @@ var SpeechWorkerClient = class {
     this.pending = /* @__PURE__ */ new Map();
     this.nextId = 1;
     this.backend = "wasm";
+    this.fallbackReason = null;
     const workerUrl = URL.createObjectURL(
       new Blob([workerSource2], { type: "application/javascript" })
     );
@@ -458,11 +469,14 @@ var SpeechWorkerClient = class {
   handleMessage(message) {
     if (message.type === "backend") {
       this.backend = message.backend === "webgpu" ? "webgpu" : "wasm";
+      this.fallbackReason = typeof message.fallbackReason === "string" ? message.fallbackReason : null;
       window.dispatchEvent(new Event("local-voiceover-state"));
+      window.dispatchEvent(new CustomEvent("local-voiceover-backend", { detail: { backend: this.backend, fallbackReason: this.fallbackReason } }));
       return;
     }
     if (message.type === "ready") {
       this.backend = message.backend === "webgpu" ? "webgpu" : "wasm";
+      this.fallbackReason = typeof message.fallbackReason === "string" ? message.fallbackReason : null;
       this.resolveReady();
       return;
     }
@@ -507,6 +521,9 @@ var LocalVoiceoverPlugin = class extends import_obsidian4.Plugin {
     await this.loadSettings();
     this.player.setOnStateChange(() => this.syncPlaybackState());
     this.addSettingTab(new LocalVoiceoverSettingTab(this.app, this));
+    const onBackend = (event) => this.reportBackend(event);
+    window.addEventListener("local-voiceover-backend", onBackend);
+    this.register(() => window.removeEventListener("local-voiceover-backend", onBackend));
     this.registerEditorExtension([
       playbackHighlightExtension,
       createSelectionToolbarExtension({
@@ -548,6 +565,13 @@ var LocalVoiceoverPlugin = class extends import_obsidian4.Plugin {
   }
   unlockPlaybackRange() {
     window.dispatchEvent(new Event("local-voiceover-range-unlock"));
+  }
+  reportBackend(event) {
+    const detail = event.detail;
+    if (detail?.backend !== "wasm" || !detail.fallbackReason)
+      return;
+    console.warn("Local Voiceover WebGPU failed; switched to WASM.", detail.fallbackReason);
+    new import_obsidian4.Notice("Hardware acceleration failed; Local voiceover switched to wasm. See the developer console for details.");
   }
   speakCommand(checking, editor) {
     const text = editor.getSelection().trim();
@@ -631,6 +655,8 @@ var LocalVoiceoverPlugin = class extends import_obsidian4.Plugin {
       );
       this.worker = worker;
       new import_obsidian4.Notice(`Local voice model is using ${worker.backend === "webgpu" ? "WebGPU" : "WASM"}.`);
+      if (worker.fallbackReason)
+        console.warn("Local Voiceover WebGPU failed during initialization; using WASM.", worker.fallbackReason);
       window.dispatchEvent(new Event("local-voiceover-state"));
       return worker;
     }).finally(() => {

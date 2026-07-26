@@ -9,3 +9,4 @@ wasm/
 worker.js
 src/generatedWorker.ts
 runtime-cache/
+data.json

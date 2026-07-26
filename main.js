@@ -289,6 +289,9 @@ function createSelectionToolbarExtension(actions) {
         this.scheduleRender();
       }
       update(update) {
+        if (update.docChanged && this.playbackText) {
+          this.playbackFrom = update.changes.mapPos(this.playbackFrom);
+        }
         if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged)
           this.scheduleRender();
       }

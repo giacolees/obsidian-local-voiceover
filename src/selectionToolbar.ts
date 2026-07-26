@@ -127,6 +127,11 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 			}
 
 			update(update: ViewUpdate): void {
+				if (update.docChanged && this.playbackText) {
+					// The transaction filter permits only changes outside the locked range.
+					// Mapping keeps future chunk highlights attached to the same source text.
+					this.playbackFrom = update.changes.mapPos(this.playbackFrom);
+				}
 				if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged) this.scheduleRender();
 			}
 

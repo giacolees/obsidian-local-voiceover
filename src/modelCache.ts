@@ -1,7 +1,7 @@
 import { normalizePath, requestUrl, type DataAdapter } from "obsidian";
 
 export const MODEL_BASE_URL = "https://huggingface.co/owensong/Inflect-Micro-v2-ONNX/resolve/51618dec4d1a9a948fe15de45efe6a175eea8c54/onnx";
-export const ORT_BASE_URL = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist";
+export const ORT_BASE_URL = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist";
 export type CacheAsset =
 	| "duration.onnx"
 	| "decode.onnx"
@@ -49,13 +49,14 @@ export class ModelCache {
 	private async load(name: CacheAsset, baseUrl: string, onProgress: Progress): Promise<ArrayBuffer> {
 		const manifest = await this.loadManifest();
 		const path = this.pathFor(name);
+		const url = `${baseUrl}/${name}`;
 		if (await this.adapter.exists(path)) {
 			const bytes = await this.adapter.readBinary(path);
-			if (manifest.assets[name] && (await sha256(bytes)) === manifest.assets[name]?.sha256) return bytes;
+			const cached = manifest.assets[name];
+			if (cached?.url === url && (await sha256(bytes)) === cached.sha256) return bytes;
 			await this.adapter.remove(path);
 		}
 		onProgress(0);
-		const url = `${baseUrl}/${name}`;
 		const response = await requestUrl({ url, throw: false });
 		if (response.status < 200 || response.status >= 300) throw new Error(`Could not download ${name} (${response.status}).`);
 		const bytes = response.arrayBuffer;

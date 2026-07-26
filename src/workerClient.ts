@@ -64,6 +64,11 @@ export class SpeechWorkerClient {
 	}
 
 	private handleMessage(message: Record<string, unknown>): void {
+		if (message.type === "backend") {
+			this.backend = message.backend === "webgpu" ? "webgpu" : "wasm";
+			window.dispatchEvent(new Event("local-voiceover-state"));
+			return;
+		}
 		if (message.type === "ready") {
 			this.backend = message.backend === "webgpu" ? "webgpu" : "wasm";
 			this.resolveReady();

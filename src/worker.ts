@@ -32,6 +32,8 @@ async function handleMessage(message: InitMessage | SynthesizeMessage | AbortMes
 			inference = await createInflectInference({
 				loadModel: async (name: "duration.onnx" | "decode.onnx") => message.models[name],
 				wasmPaths: message.wasmPaths as unknown as string,
+				onBackend: (backend: string, fallbackReason?: string) =>
+					post({ type: "backend", backend, fallbackReason }),
 			});
 			post({ type: "ready", backend: inference.backend, fallbackReason: inference.fallbackReason });
 		} catch (error) {

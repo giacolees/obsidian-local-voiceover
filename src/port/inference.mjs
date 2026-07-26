@@ -9,7 +9,7 @@ export const SAMPLE_RATE = 24000;
  * Both graphs use one execution provider so WebGPU initialization can fall
  * back atomically to WASM.
  */
-export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" }) {
+export async function createInflectInference({ loadModel, wasmPaths = "./wasm/", onBackend }) {
 	const nodeProcess = globalThis.process;
 	try {
 		globalThis.process = undefined;
@@ -44,8 +44,17 @@ export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" 
 			}
 		}
 		if (!duration || !decode) [duration, decode] = await createSessions("wasm");
+		onBackend?.(backend, fallbackReason);
+		const switchToWasm = async (error) => {
+			if (backend !== "webgpu") throw error;
+			fallbackReason = error instanceof Error ? error.message : String(error);
+			await Promise.all([duration.release?.(), decode.release?.()]);
+			[duration, decode] = await createSessions("wasm");
+			backend = "wasm";
+			onBackend?.(backend, fallbackReason);
+		};
 
-		const synthesizeChunk = async (output, seed, speed, variation) => {
+		const runChunk = async (output, seed, speed, variation) => {
 			if (output.ids.length > MAX_TOKENS)
 				throw new Error(`Token limit exceeded: ${output.ids.length}`);
 			const tokens = BigInt64Array.from(output.ids, BigInt);
@@ -63,6 +72,14 @@ export async function createInflectInference({ loadModel, wasmPaths = "./wasm/" 
 				noise_scale: new ort.Tensor("float32", Float32Array.of(variation), []),
 			})).waveform.data;
 			return { waveform };
+		};
+		const synthesizeChunk = async (output, seed, speed, variation) => {
+			try {
+				return await runChunk(output, seed, speed, variation);
+			} catch (error) {
+				await switchToWasm(error);
+				return runChunk(output, seed, speed, variation);
+			}
 		};
 
 		return {

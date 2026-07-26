@@ -7,13 +7,16 @@ type SettingsPlugin = {
 	clearHighlight(): void;
 };
 
+let tooltipId = 0;
 function addInfo(setting: Setting, explanation: string): void {
+	tooltipId += 1;
+	const id = `local-voiceover-setting-tooltip-${tooltipId}`;
 	const button = setting.nameEl.createEl("button", {
 		cls: "local-voiceover-setting-info",
-		attr: { type: "button", "aria-label": explanation },
+		attr: { type: "button", "aria-describedby": id },
 	});
 	button.setText("I");
-	button.createSpan({ cls: "local-voiceover-setting-tooltip", text: explanation });
+	button.createSpan({ cls: "local-voiceover-setting-tooltip", text: explanation, attr: { id } });
 }
 
 export class LocalVoiceoverSettingTab extends PluginSettingTab {

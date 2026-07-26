@@ -15,6 +15,10 @@ function addInfo(setting: Setting, explanation: string): void {
 	button.setText("I");
 }
 
+function addSection(container: HTMLElement, label: string): void {
+	container.createDiv({ cls: "local-voiceover-settings-section", text: label });
+}
+
 function createMarkdownRules(container: HTMLElement, voiceover: SettingsPlugin): HTMLElement {
 	const table = container.createDiv({ cls: "local-voiceover-markdown-rules" });
 	const header = table.createDiv({ cls: "local-voiceover-markdown-rule local-voiceover-markdown-rule-header" });
@@ -52,6 +56,7 @@ export class LocalVoiceoverSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		addSection(containerEl, "Voice");
 		const speed = new Setting(containerEl).setName("Speed");
 		addInfo(speed, "Speech speed. Lower is slower. Choose a value from 0.5 to 2.0.");
 		speed.addSlider((slider) => {
@@ -102,6 +107,7 @@ export class LocalVoiceoverSettingTab extends PluginSettingTab {
 			});
 		});
 
+		addSection(containerEl, "Markdown");
 		const markdown = new Setting(containerEl).setName("Markdown normalization");
 		addInfo(markdown, "Choose how selected Markdown is prepared before speech.");
 		const markdownRules = createMarkdownRules(containerEl, this.voiceover);
@@ -126,6 +132,7 @@ export class LocalVoiceoverSettingTab extends PluginSettingTab {
 			await this.voiceover.saveSettings();
 		}));
 
+		addSection(containerEl, "Playback");
 		const highlight = new Setting(containerEl).setName("Highlight spoken text");
 		addInfo(highlight, "Highlight the currently playing text chunk in the editor.");
 		highlight.addToggle((toggle) => toggle.setValue(this.voiceover.settings.highlightSpokenText).onChange(async (value) => {

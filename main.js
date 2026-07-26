@@ -415,6 +415,9 @@ function addInfo(setting, explanation) {
   });
   button.setText("I");
 }
+function addSection(container, label) {
+  container.createDiv({ cls: "local-voiceover-settings-section", text: label });
+}
 function createMarkdownRules(container, voiceover) {
   const table = container.createDiv({ cls: "local-voiceover-markdown-rules" });
   const header = table.createDiv({ cls: "local-voiceover-markdown-rule local-voiceover-markdown-rule-header" });
@@ -448,6 +451,7 @@ var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
+    addSection(containerEl, "Voice");
     const speed = new import_obsidian3.Setting(containerEl).setName("Speed");
     addInfo(speed, "Speech speed. Lower is slower. Choose a value from 0.5 to 2.0.");
     speed.addSlider((slider) => {
@@ -502,6 +506,7 @@ var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
         await this.voiceover.saveSettings();
       });
     });
+    addSection(containerEl, "Markdown");
     const markdown = new import_obsidian3.Setting(containerEl).setName("Markdown normalization");
     addInfo(markdown, "Choose how selected Markdown is prepared before speech.");
     const markdownRules = createMarkdownRules(containerEl, this.voiceover);
@@ -522,6 +527,7 @@ var LocalVoiceoverSettingTab = class extends import_obsidian3.PluginSettingTab {
       normalizeSpeechSettings(this.voiceover.settings);
       await this.voiceover.saveSettings();
     }));
+    addSection(containerEl, "Playback");
     const highlight = new import_obsidian3.Setting(containerEl).setName("Highlight spoken text");
     addInfo(highlight, "Highlight the currently playing text chunk in the editor.");
     highlight.addToggle((toggle) => toggle.setValue(this.voiceover.settings.highlightSpokenText).onChange(async (value) => {

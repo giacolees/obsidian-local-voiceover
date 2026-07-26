@@ -47,6 +47,27 @@
 	outline: none;
 }
 
+.local-voiceover-settings-section {
+	align-items: center;
+	color: var(--text-muted);
+	display: flex;
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	letter-spacing: 0.07em;
+	padding: 23px 0 6px;
+	text-transform: uppercase;
+}
+
+.local-voiceover-settings-section:first-child { padding-top: 15px; }
+
+.local-voiceover-settings-section::after {
+	background: var(--background-modifier-border);
+	content: "";
+	flex: 1;
+	height: 1px;
+	margin-left: 10px;
+}
+
 .local-voiceover-markdown-rules {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);

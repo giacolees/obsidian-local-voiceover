@@ -6,6 +6,10 @@ Local Voiceover turns the selected text in an Obsidian note into speech directly
 
 > **Built for focused reading.** Inflect Micro v2 is a compact 9.36 M-parameter English text-to-waveform model. Local Voiceover keeps its phonemizer and ONNX graphs in a worker, so long passages can synthesize without freezing the editor. The first run downloads roughly 38 MB of model graphs plus its runtime assets; later playback works from the local cache, including offline.
 
+## Demo
+
+![Local Voiceover captioned demo](assets/local-voiceover-demo.captioned.gif)
+
 ---
 
 ## Why Local Voiceover?

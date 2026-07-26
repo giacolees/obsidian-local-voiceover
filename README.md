@@ -1,4 +1,4 @@
-# Local Voiceover: Private Text-to-Speech for Obsidian
+# Local Voiceover - Private TTS
 
 **Select a passage. Hear it in seconds. Never send your notes to a voice provider.**
 

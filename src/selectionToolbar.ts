@@ -1,5 +1,5 @@
 import { Decoration, EditorView, ViewPlugin, type ViewUpdate } from "@codemirror/view";
-import { StateEffect, StateField, type Extension } from "@codemirror/state";
+import { EditorState, StateEffect, StateField, type Extension } from "@codemirror/state";
 import { setIcon } from "obsidian";
 
 export type VoiceoverState = "idle" | "loading" | "generating" | "speaking";
@@ -12,6 +12,29 @@ export interface SelectionToolbarActions {
 }
 
 const setPlaybackHighlight = StateEffect.define<{ from: number; to: number } | null>();
+const spokenRangeLock = StateEffect.define<{ from: number; to: number } | null>();
+const spokenRangeLockField = StateField.define<{ from: number; to: number } | null>({
+	create: () => null,
+	update(value, transaction) {
+		let next = value ? { from: transaction.changes.mapPos(value.from), to: transaction.changes.mapPos(value.to, 1) } : null;
+		for (const effect of transaction.effects) if (effect.is(spokenRangeLock)) next = effect.value;
+		return next;
+	},
+});
+const spokenRangeLockFilter = EditorState.transactionFilter.of((transaction) => {
+	const lock = transaction.startState.field(spokenRangeLockField);
+	if (!lock || !transaction.docChanged) return transaction;
+	let overlaps = false;
+	transaction.changes.iterChanges((fromA, toA) => {
+		if (fromA === toA ? fromA > lock.from && fromA < lock.to : fromA < lock.to && toA > lock.from)
+			overlaps = true;
+	});
+	return overlaps ? [] : transaction;
+});
+const spokenRangeLockDecoration = EditorView.decorations.from(spokenRangeLockField, (lock) =>
+	lock ? Decoration.set([Decoration.mark({ class: "local-voiceover-locked-text" }).range(lock.from, lock.to)]) : Decoration.none,
+);
+
 const playbackHighlightField = StateField.define({
 	create: () => Decoration.none,
 	update(value, transaction) {
@@ -28,6 +51,9 @@ const playbackHighlightField = StateField.define({
 });
 
 export const playbackHighlightExtension: Extension = [
+	spokenRangeLockField,
+	spokenRangeLockFilter,
+	spokenRangeLockDecoration,
 	playbackHighlightField,
 	EditorView.decorations.from(playbackHighlightField),
 ];
@@ -46,12 +72,26 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 			private highlightOffset = 0;
 			private destroyed = false;
 			private clearPending = false;
+			private unlockPending = false;
+			private lockGeneration = 0;
 			private readonly refresh = () => this.scheduleRender();
 			private readonly highlightChunk = (event: Event) => this.applyChunkHighlight(event);
 			private readonly startPlayback = () => {
+				this.lockGeneration += 1;
 				this.playbackText = this.selectedText;
 				this.playbackFrom = this.selectedFrom;
 				this.highlightOffset = 0;
+				if (this.selectedText)
+					this.view.dispatch({ effects: spokenRangeLock.of({ from: this.selectedFrom, to: this.selectedFrom + this.selectedText.length }) });
+			};
+			private readonly clearLock = () => {
+				if (this.unlockPending) return;
+				this.unlockPending = true;
+				const generation = this.lockGeneration;
+				window.setTimeout(() => {
+					this.unlockPending = false;
+					if (!this.destroyed && generation === this.lockGeneration) this.view.dispatch({ effects: spokenRangeLock.of(null) });
+				}, 0);
 			};
 			private readonly clearHighlight = () => {
 				if (this.clearPending) return;
@@ -81,11 +121,13 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 				window.addEventListener("local-voiceover-state", this.refresh);
 				window.addEventListener("local-voiceover-highlight", this.highlightChunk);
 				window.addEventListener("local-voiceover-playback-start", this.startPlayback);
+				window.addEventListener("local-voiceover-range-unlock", this.clearLock);
 				window.addEventListener("local-voiceover-highlight-clear", this.clearHighlight);
 				this.scheduleRender();
 			}
 
 			update(update: ViewUpdate): void {
+				if (update.selectionSet && actions.getState() !== "idle") this.clearLock();
 				if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged) this.scheduleRender();
 			}
 
@@ -94,6 +136,7 @@ export function createSelectionToolbarExtension(actions: SelectionToolbarActions
 				window.removeEventListener("local-voiceover-state", this.refresh);
 				window.removeEventListener("local-voiceover-highlight", this.highlightChunk);
 				window.removeEventListener("local-voiceover-playback-start", this.startPlayback);
+				window.removeEventListener("local-voiceover-range-unlock", this.clearLock);
 				window.removeEventListener("local-voiceover-highlight-clear", this.clearHighlight);
 				this.toolbar.remove();
 			}

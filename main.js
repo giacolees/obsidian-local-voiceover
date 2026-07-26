@@ -172,6 +172,32 @@ var import_view = require("@codemirror/view");
 var import_state = require("@codemirror/state");
 var import_obsidian2 = require("obsidian");
 var setPlaybackHighlight = import_state.StateEffect.define();
+var spokenRangeLock = import_state.StateEffect.define();
+var spokenRangeLockField = import_state.StateField.define({
+  create: () => null,
+  update(value, transaction) {
+    let next = value ? { from: transaction.changes.mapPos(value.from), to: transaction.changes.mapPos(value.to, 1) } : null;
+    for (const effect of transaction.effects)
+      if (effect.is(spokenRangeLock))
+        next = effect.value;
+    return next;
+  }
+});
+var spokenRangeLockFilter = import_state.EditorState.transactionFilter.of((transaction) => {
+  const lock = transaction.startState.field(spokenRangeLockField);
+  if (!lock || !transaction.docChanged)
+    return transaction;
+  let overlaps = false;
+  transaction.changes.iterChanges((fromA, toA) => {
+    if (fromA === toA ? fromA > lock.from && fromA < lock.to : fromA < lock.to && toA > lock.from)
+      overlaps = true;
+  });
+  return overlaps ? [] : transaction;
+});
+var spokenRangeLockDecoration = import_view.EditorView.decorations.from(
+  spokenRangeLockField,
+  (lock) => lock ? import_view.Decoration.set([import_view.Decoration.mark({ class: "local-voiceover-locked-text" }).range(lock.from, lock.to)]) : import_view.Decoration.none
+);
 var playbackHighlightField = import_state.StateField.define({
   create: () => import_view.Decoration.none,
   update(value, transaction) {
@@ -188,6 +214,9 @@ var playbackHighlightField = import_state.StateField.define({
   }
 });
 var playbackHighlightExtension = [
+  spokenRangeLockField,
+  spokenRangeLockFilter,
+  spokenRangeLockDecoration,
   playbackHighlightField,
   import_view.EditorView.decorations.from(playbackHighlightField)
 ];
@@ -203,12 +232,28 @@ function createSelectionToolbarExtension(actions) {
         this.highlightOffset = 0;
         this.destroyed = false;
         this.clearPending = false;
+        this.unlockPending = false;
+        this.lockGeneration = 0;
         this.refresh = () => this.scheduleRender();
         this.highlightChunk = (event) => this.applyChunkHighlight(event);
         this.startPlayback = () => {
+          this.lockGeneration += 1;
           this.playbackText = this.selectedText;
           this.playbackFrom = this.selectedFrom;
           this.highlightOffset = 0;
+          if (this.selectedText)
+            this.view.dispatch({ effects: spokenRangeLock.of({ from: this.selectedFrom, to: this.selectedFrom + this.selectedText.length }) });
+        };
+        this.clearLock = () => {
+          if (this.unlockPending)
+            return;
+          this.unlockPending = true;
+          const generation = this.lockGeneration;
+          window.setTimeout(() => {
+            this.unlockPending = false;
+            if (!this.destroyed && generation === this.lockGeneration)
+              this.view.dispatch({ effects: spokenRangeLock.of(null) });
+          }, 0);
         };
         this.clearHighlight = () => {
           if (this.clearPending)
@@ -239,10 +284,13 @@ function createSelectionToolbarExtension(actions) {
         window.addEventListener("local-voiceover-state", this.refresh);
         window.addEventListener("local-voiceover-highlight", this.highlightChunk);
         window.addEventListener("local-voiceover-playback-start", this.startPlayback);
+        window.addEventListener("local-voiceover-range-unlock", this.clearLock);
         window.addEventListener("local-voiceover-highlight-clear", this.clearHighlight);
         this.scheduleRender();
       }
       update(update) {
+        if (update.selectionSet && actions.getState() !== "idle")
+          this.clearLock();
         if (update.selectionSet || update.geometryChanged || update.viewportChanged || update.focusChanged)
           this.scheduleRender();
       }
@@ -251,6 +299,7 @@ function createSelectionToolbarExtension(actions) {
         window.removeEventListener("local-voiceover-state", this.refresh);
         window.removeEventListener("local-voiceover-highlight", this.highlightChunk);
         window.removeEventListener("local-voiceover-playback-start", this.startPlayback);
+        window.removeEventListener("local-voiceover-range-unlock", this.clearLock);
         window.removeEventListener("local-voiceover-highlight-clear", this.clearHighlight);
         this.toolbar.remove();
       }
@@ -447,6 +496,9 @@ var LocalVoiceoverPlugin = class extends import_obsidian4.Plugin {
   clearHighlight() {
     window.dispatchEvent(new Event("local-voiceover-highlight-clear"));
   }
+  unlockPlaybackRange() {
+    window.dispatchEvent(new Event("local-voiceover-range-unlock"));
+  }
   speakCommand(checking, editor) {
     const text = editor.getSelection().trim();
     if (!text || this.isBusy())
@@ -461,6 +513,7 @@ var LocalVoiceoverPlugin = class extends import_obsidian4.Plugin {
     const abort = new AbortController();
     this.abortController = abort;
     this.clearHighlight();
+    this.unlockPlaybackRange();
     window.dispatchEvent(new Event("local-voiceover-playback-start"));
     this.setState("loading");
     try {
@@ -536,12 +589,14 @@ var LocalVoiceoverPlugin = class extends import_obsidian4.Plugin {
     this.abortController = null;
     this.player.stop();
     this.clearHighlight();
+    this.unlockPlaybackRange();
     this.setState("idle");
     new import_obsidian4.Notice("Speech stopped.");
   }
   syncPlaybackState() {
     if (!this.abortController && !this.player.isPlaying) {
       this.clearHighlight();
+      this.unlockPlaybackRange();
       this.setState("idle");
     }
   }
@@ -556,6 +611,7 @@ var LocalVoiceoverPlugin = class extends import_obsidian4.Plugin {
     this.abortController = null;
     this.player.stop();
     this.clearHighlight();
+    this.unlockPlaybackRange();
     this.worker?.dispose();
     this.worker = null;
   }

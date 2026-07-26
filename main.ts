@@ -59,6 +59,10 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		window.dispatchEvent(new Event("local-voiceover-highlight-clear"));
 	}
 
+	private unlockPlaybackRange(): void {
+		window.dispatchEvent(new Event("local-voiceover-range-unlock"));
+	}
+
 	private speakCommand(checking: boolean, editor: Editor): boolean {
 		const text = editor.getSelection().trim();
 		if (!text || this.isBusy()) return false;
@@ -71,6 +75,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		const abort = new AbortController();
 		this.abortController = abort;
 		this.clearHighlight();
+		this.unlockPlaybackRange();
 		window.dispatchEvent(new Event("local-voiceover-playback-start"));
 		this.setState("loading");
 		try {
@@ -145,6 +150,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		this.abortController = null;
 		this.player.stop();
 		this.clearHighlight();
+		this.unlockPlaybackRange();
 		this.setState("idle");
 		new Notice("Speech stopped.");
 	}
@@ -152,6 +158,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 	private syncPlaybackState(): void {
 		if (!this.abortController && !this.player.isPlaying) {
 			this.clearHighlight();
+			this.unlockPlaybackRange();
 			this.setState("idle");
 		}
 	}
@@ -167,6 +174,7 @@ export default class LocalVoiceoverPlugin extends Plugin {
 		this.abortController = null;
 		this.player.stop();
 		this.clearHighlight();
+		this.unlockPlaybackRange();
 		this.worker?.dispose();
 		this.worker = null;
 	}

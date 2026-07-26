@@ -12,10 +12,7 @@
 	z-index: var(--layer-popover);
 }
 
-.local-voiceover-selection-toolbar__button {
-	height: 28px;
-	width: 28px;
-}
+.local-voiceover-selection-toolbar__button { height: 28px; width: 28px; }
 
 .local-voiceover-selection-toolbar__status {
 	border-left: 1px solid var(--background-modifier-border);
@@ -23,6 +20,11 @@
 	font-size: var(--font-ui-smaller);
 	margin-left: 2px;
 	padding: 0 6px;
+}
+
+.local-voiceover-locked-text {
+	background: color-mix(in srgb, var(--text-accent) 16%, transparent);
+	box-shadow: inset 0 -1px color-mix(in srgb, var(--text-accent) 60%, transparent);
 }
 
 .local-voiceover-playing-text {
